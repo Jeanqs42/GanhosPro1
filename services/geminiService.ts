@@ -1,11 +1,11 @@
-import * as GenAI from "@google/genai"; // Importa o módulo inteiro como 'GenAI'
+import { GoogleGenerativeAI } from "@google/genai"; // Corrigido para importação nomeada
 import { RunRecord, AppSettings } from '../types';
 
 // Validação e leitura da API Key (Vite)
 const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.GEMINI_API_KEY;
 console.log("GEMINI_API_KEY lida em geminiService:", apiKey ? "[definida]" : "[NÃO DEFINIDA]");
-// Instancia GoogleGenerativeAI a partir do namespace importado
-const ai = apiKey ? new GenAI({ apiKey }) : null; // Corrigido para instanciar diretamente de GenAI
+// Instancia GoogleGenerativeAI diretamente
+const ai = apiKey ? new GoogleGenerativeAI({ apiKey }) : null;
 
 export const analyzeRecords = async (records: RunRecord[], settings: AppSettings): Promise<string> => {
     if (!apiKey || !ai) {

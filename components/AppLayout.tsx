@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
 import { Database, Settings as SettingsIcon, Crown, Home } from 'lucide-react';
 import Dashboard from './Dashboard';
@@ -7,22 +7,25 @@ import Settings from './Settings';
 import Premium from './Premium';
 import { RunRecord, AppSettings } from '../types';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { useOfflineSync } from '../hooks/useOfflineSync'; // Importar useOfflineSync
+import { useOfflineSync } from '../hooks/useOfflineSync';
 
 const AppLayout: React.FC = () => {
-  // Agora, os registros serão gerenciados pelo useOfflineSync
   const { 
     getAllRecords, 
     saveRecord: saveRecordOffline, 
     deleteRecord: deleteRecordOffline,
-    isInitialized, // Adicionado para saber quando o DB está pronto
+    isInitialized,
+    pendingOperations, // Adicionado para monitorar operações pendentes
   } = useOfflineSync();
 
-  const [records, setRecords] = useLocalStorage<RunRecord[]>('ganhospro_records_local_cache', []); // Usar um cache local para o AppLayout
+  // O estado 'records' agora será gerenciado internamente pelo AppLayout,
+  // sendo carregado do IndexedDB e atualizado após cada operação.
+  const [records, setRecords] = useState<RunRecord[]>([]);
   const [settings, setSettings] = useLocalStorage<AppSettings>('ganhospro_settings', { costPerKm: 0.75 });
   const [isPremium, setIsPremium] = useLocalStorage<boolean>('ganhospro_is_premium', false);
 
   // Carregar registros do IndexedDB quando o componente montar ou o DB inicializar
+  // E também re-carregar se houver operações pendentes que foram processadas
   useEffect(() => {
     if (isInitialized) {
       const fetchRecords = async () => {
@@ -31,7 +34,7 @@ const AppLayout: React.FC = () => {
       };
       fetchRecords();
     }
-  }, [isInitialized, getAllRecords, setRecords]);
+  }, [isInitialized, getAllRecords, pendingOperations.length]); // Adicionado pendingOperations.length como dependência
 
   // Função para adicionar ou atualizar um registro, usando o useOfflineSync
   const addOrUpdateRecord = async (record: RunRecord) => {
