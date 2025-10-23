@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
 import { Database, Settings as SettingsIcon, Crown, Home } from 'lucide-react';
 import Dashboard from './Dashboard';
@@ -7,27 +7,59 @@ import Settings from './Settings';
 import Premium from './Premium';
 import { RunRecord, AppSettings } from '../types';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useOfflineSync } from '../hooks/useOfflineSync'; // Importar useOfflineSync
 
 const AppLayout: React.FC = () => {
-  const [records, setRecords] = useLocalStorage<RunRecord[]>('ganhospro_records', []);
+  // Agora, os registros serão gerenciados pelo useOfflineSync
+  const { 
+    getAllRecords, 
+    saveRecord: saveRecordOffline, 
+    deleteRecord: deleteRecordOffline,
+    isInitialized, // Adicionado para saber quando o DB está pronto
+  } = useOfflineSync();
+
+  const [records, setRecords] = useLocalStorage<RunRecord[]>('ganhospro_records_local_cache', []); // Usar um cache local para o AppLayout
   const [settings, setSettings] = useLocalStorage<AppSettings>('ganhospro_settings', { costPerKm: 0.75 });
   const [isPremium, setIsPremium] = useLocalStorage<boolean>('ganhospro_is_premium', false);
 
-  const addOrUpdateRecord = (record: RunRecord) => {
-    setRecords(prevRecords => {
-      const existingIndex = prevRecords.findIndex(r => r.id === record.id);
-      if (existingIndex > -1) {
-        const updatedRecords = [...prevRecords];
-        updatedRecords[existingIndex] = record;
-        return updatedRecords;
-      } else {
-        return [...prevRecords, record];
-      }
-    });
+  // Carregar registros do IndexedDB quando o componente montar ou o DB inicializar
+  useEffect(() => {
+    if (isInitialized) {
+      const fetchRecords = async () => {
+        const fetchedRecords = await getAllRecords();
+        setRecords(fetchedRecords);
+      };
+      fetchRecords();
+    }
+  }, [isInitialized, getAllRecords, setRecords]);
+
+  // Função para adicionar ou atualizar um registro, usando o useOfflineSync
+  const addOrUpdateRecord = async (record: RunRecord) => {
+    const success = await saveRecordOffline(record);
+    if (success) {
+      // Atualiza o estado local do AppLayout após a operação no IndexedDB
+      setRecords(prevRecords => {
+        const existingIndex = prevRecords.findIndex(r => r.id === record.id);
+        if (existingIndex > -1) {
+          const updatedRecords = [...prevRecords];
+          updatedRecords[existingIndex] = record;
+          return updatedRecords;
+        } else {
+          return [...prevRecords, record];
+        }
+      });
+    }
+    return success;
   };
 
-  const deleteRecord = (id: string) => {
-    setRecords(prevRecords => prevRecords.filter(r => r.id !== id));
+  // Função para deletar um registro, usando o useOfflineSync
+  const deleteRecord = async (id: string) => {
+    const success = await deleteRecordOffline(id);
+    if (success) {
+      // Atualiza o estado local do AppLayout após a operação no IndexedDB
+      setRecords(prevRecords => prevRecords.filter(r => r.id !== id));
+    }
+    return success;
   };
 
   return (

@@ -10,8 +10,8 @@ import { useOfflineSync } from '../hooks/useOfflineSync';
 interface DashboardProps {
   records: RunRecord[];
   settings: AppSettings;
-  addOrUpdateRecord: (record: RunRecord) => void;
-  deleteRecord: (id: string) => void;
+  addOrUpdateRecord: (record: RunRecord) => void; // Agora recebe a função do AppLayout
+  deleteRecord: (id: string) => void; // Agora recebe a função do AppLayout
   isPremium: boolean;
 }
 
@@ -63,11 +63,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
         isInitialized,
         hasPendingOperations,
         syncInProgress,
-        saveRecord: saveRecordOffline,
-        getAllRecords: getAllRecordsOffline,
-        deleteRecord: deleteRecordOffline,
         forcSync,
-        // add lastSyncTime from hook
         lastSyncTime,
     } = useOfflineSync();
 
@@ -207,8 +203,8 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
             additionalCosts: additionalCosts ? parseFloat(additionalCosts) : undefined,
         };
 
-        // Usar sincronização offline
-        const saveSuccess = await saveRecordOffline(record);
+        // Usar a função addOrUpdateRecord passada via props do AppLayout
+        const saveSuccess = await addOrUpdateRecord(record);
         
         if (!saveSuccess) {
             toast.error('Erro ao salvar registro. Tente novamente.');
@@ -217,13 +213,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
 
         // Se houver registro para sobrescrever, deletar o antigo
         if (recordToOverwrite) {
-            await deleteRecordOffline(recordToOverwrite.id);
-        }
-
-        // Atualizar estado local para refletir imediatamente
-        addOrUpdateRecord(record);
-        if (recordToOverwrite) {
-            deleteRecord(recordToOverwrite.id);
+            await deleteRecord(recordToOverwrite.id); // Usar a função deleteRecord passada via props
         }
         
         let successMessage: string;

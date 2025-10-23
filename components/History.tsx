@@ -4,11 +4,11 @@ import toast from 'react-hot-toast';
 import { RunRecord, AppSettings } from '../types';
 import { Trash2, Calendar, Route, FileDown, FileText, Wifi, WifiOff, Clock3 } from 'lucide-react';
 import { exportCSV, exportPDF } from '../utils/export';
-import { useOfflineSync } from '../hooks/useOfflineSync';
+import { useOfflineSync } from '../hooks/useOfflineSync'; // Importar useOfflineSync
 
 interface HistoryProps {
   records: RunRecord[];
-  deleteRecord: (id: string) => void;
+  deleteRecord: (id: string) => void; // Agora recebe a função do AppLayout
   settings: AppSettings;
 }
 
@@ -20,31 +20,21 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
     hasPendingOperations,
     syncInProgress,
     forcSync,
-    getAllRecords,
-    deleteRecord: deleteRecordOffline,
+    getAllRecords, // Usado para carregar os registros iniciais
+    deleteRecord: deleteRecordOfflineHook, // Renomeado para evitar conflito com prop
     pendingOperations,
     lastSyncTime,
   } = useOfflineSync();
 
-  const [offlineRecords, setOfflineRecords] = useState<RunRecord[] | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    void (async () => {
-      try {
-        const recs = await getAllRecords();
-        if (mounted) setOfflineRecords(recs);
-      } catch (e) {
-        // silently fallback
-      }
-    })();
-    return () => { mounted = false; };
-  }, [getAllRecords]);
-
+  // O estado offlineRecords agora é o 'records' que vem via props do AppLayout
+  // Não precisamos de um estado local separado para 'offlineRecords' aqui,
+  // pois 'records' já é a fonte de verdade atualizada pelo AppLayout.
+  // No entanto, para manter a compatibilidade com a lógica existente,
+  // vamos usar 'records' diretamente.
+  
   const sortedRecords = useMemo(() => {
-    const list = offlineRecords ?? records;
-    return [...list].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [offlineRecords, records]);
+    return [...records].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [records]);
 
   const handleViewDetails = (record: RunRecord) => {
     navigate('/', { state: { record: record } });
@@ -68,13 +58,12 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
                 </button>
                 <button
                     onClick={async () => {
-                        const success = await deleteRecordOffline(id);
+                        // Chama a função deleteRecord passada via props do AppLayout
+                        const success = await deleteRecord(id); 
                         if (!success) {
                           toast.error('Falha ao apagar. Tente novamente.');
                           return;
                         }
-                        setOfflineRecords(prev => prev ? prev.filter(r => r.id !== id) : prev);
-                        deleteRecord(id);
                         toast.dismiss(t.id);
                         toast.success('Registro apagado com sucesso!');
                     }}
@@ -90,8 +79,7 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
   };
 
   const handleExportCSV = () => {
-    const list = offlineRecords ?? records;
-    if (list.length === 0) {
+    if (records.length === 0) {
       toast.error('Não há registros para exportar.');
       return;
     }
@@ -103,21 +91,19 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
     }
   };
 
-  const totalEarnings = useMemo(() => (offlineRecords ?? records).reduce((sum, r) => sum + r.totalEarnings, 0), [offlineRecords, records]);
-  const totalKm = useMemo(() => (offlineRecords ?? records).reduce((sum, r) => sum + r.kmDriven, 0), [offlineRecords, records]);
+  const totalEarnings = useMemo(() => records.reduce((sum, r) => sum + r.totalEarnings, 0), [records]);
+  const totalKm = useMemo(() => records.reduce((sum, r) => sum + r.kmDriven, 0), [records]);
   const totalNetProfit = useMemo(() => {
-    const list = offlineRecords ?? records;
-    return list.reduce((sum, r) => {
+    return records.reduce((sum, r) => {
       const carCost = r.kmDriven * settings.costPerKm;
       const additionalCosts = r.additionalCosts || 0;
       const netProfit = r.totalEarnings - additionalCosts - carCost;
       return sum + netProfit;
     }, 0);
-  }, [offlineRecords, records, settings.costPerKm]);
+  }, [records, settings.costPerKm]);
 
   const handleExportPDF = () => {
-    const list = offlineRecords ?? records;
-    if (list.length === 0) {
+    if (records.length === 0) {
       toast.error('Não há registros para exportar.');
       return;
     }
@@ -129,7 +115,7 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
     }
   };
 
-  if ((offlineRecords ?? records).length === 0) {
+  if (records.length === 0) {
     return (
       <div className="text-center text-gray-400 mt-10">
         <Calendar size={48} className="mx-auto mb-4" />
