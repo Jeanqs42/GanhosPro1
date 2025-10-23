@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/genai"; // Corrigido para importação nomeada
+import { GoogleGenerativeAI } from "@google/genai"; // Importação nomeada padrão
 import { RunRecord, AppSettings } from '../types';
 
 // Validação e leitura da API Key (Vite)
