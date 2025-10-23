@@ -1,0 +1,445 @@
+:root {
+    --brand-primary: #10b981;
+    --brand-secondary: #059669;
+    --brand-dark: #111827;
+    --brand-light: #f9fafb;
+    --brand-accent: #f59e0b;
+    --brand-gray: #374151;
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --background: #111827;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--background);
+    color: var(--text-primary);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+/* --- Hero Section --- */
+.hero {
+    background: radial-gradient(circle at 20% 30%, rgba(16, 185, 129, 0.1), transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(245, 158, 11, 0.08), transparent 40%),
+                var(--background);
+    padding: 6rem 0;
+    overflow: hidden;
+}
+
+.hero-content {
+    display: flex;
+    align-items: center;
+    gap: 4rem;
+}
+
+.hero-text {
+    flex: 1;
+    animation: slideInFromLeft 1s ease-out forwards;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.logo svg {
+    color: var(--brand-primary);
+}
+
+.logo h1 {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.hero-text h2 {
+    font-size: 3rem;
+    font-weight: 900;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+}
+
+.hero-text p {
+    font-size: 1.125rem;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    max-width: 500px;
+}
+
+.cta-button {
+    display: inline-block;
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.cta-button:hover {
+    transform: translateY(-3px);
+}
+
+.cta-button.primary {
+    background-color: var(--brand-primary);
+    color: white;
+}
+
+.cta-button.secondary {
+    background-color: var(--brand-accent);
+    color: var(--brand-dark);
+}
+
+/* --- Phone Mockup --- */
+.hero-mockup {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 1000px;
+    animation: fadeIn 1s 0.5s ease-out forwards;
+    opacity: 0;
+}
+
+.phone {
+    width: 300px;
+    height: 600px;
+    background: #1f2937;
+    border-radius: 40px;
+    border: 10px solid #1f2937;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4), inset 0 0 10px rgba(0,0,0,0.5);
+    padding: 10px;
+    transform: rotateY(-15deg) rotateX(10deg);
+    transition: transform 0.5s ease;
+}
+
+.phone:hover {
+    transform: rotateY(0) rotateX(0);
+}
+
+.screen {
+    background: var(--brand-dark);
+    width: 100%;
+    height: 100%;
+    border-radius: 30px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.mock-header {
+    font-size: 1.25rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: var(--brand-primary);
+}
+
+.mock-main-card {
+    background: var(--brand-gray);
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.mock-main-card p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.mock-main-card span {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #4ade80; /* green-400 */
+}
+
+.mock-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.mock-card {
+    background: var(--brand-gray);
+    border-radius: 12px;
+    padding: 0.75rem;
+    text-align: center;
+}
+
+.mock-card p {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.mock-card span {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #4ade80; /* green-400 */
+}
+
+.mock-card.blue span { color: #60a5fa; } /* blue-400 */
+.mock-card.yellow span { color: #facc15; } /* yellow-400 */
+
+.mock-footer {
+    margin-top: auto;
+    text-align: center;
+    font-weight: 600;
+    color: var(--brand-gray);
+    user-select: none;
+}
+
+
+/* --- Sections --- */
+section {
+    padding: 6rem 0;
+}
+
+.section-title {
+    font-size: 2.5rem;
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.section-subtitle {
+    font-size: 1.125rem;
+    text-align: center;
+    color: var(--text-secondary);
+    max-width: 700px;
+    margin: 0 auto 3rem auto;
+}
+
+/* --- Features Section --- */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-top: 4rem;
+}
+
+.feature-card {
+    background: var(--brand-gray);
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--brand-primary);
+}
+
+.feature-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--brand-primary);
+}
+.feature-icon.premium {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: var(--brand-accent);
+}
+
+.feature-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.feature-card p {
+    color: var(--text-secondary);
+}
+
+
+/* --- Install Section --- */
+.install {
+    background-color: var(--brand-dark);
+}
+
+.install-steps {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    margin-top: 4rem;
+}
+
+.install-card {
+    background-color: var(--brand-gray);
+    border-radius: 12px;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.install-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto 1.5rem auto;
+}
+.install-icon.android { background-color: rgba(163, 230, 53, 0.1); color: #a3e635; } /* lime-400 */
+.install-icon.ios { background-color: rgba(56, 189, 248, 0.1); color: #38bdf8; } /* lightBlue-400 */
+
+
+.install-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.install-card ol {
+    list-style-position: inside;
+    text-align: left;
+    display: inline-block;
+    color: var(--text-secondary);
+}
+
+.install-card li {
+    margin-bottom: 0.75rem;
+}
+
+.install-card a {
+    color: var(--brand-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+.install-card a:hover {
+    text-decoration: underline;
+}
+
+/* --- CTA Section --- */
+.cta-section {
+    background: linear-gradient(45deg, var(--brand-secondary), var(--brand-primary));
+    text-align: center;
+}
+
+.cta-section h2 {
+    font-size: 2.5rem;
+    font-weight: 900;
+    margin-bottom: 1rem;
+}
+
+.cta-section p {
+    margin-bottom: 2rem;
+    font-size: 1.125rem;
+    opacity: 0.9;
+}
+
+
+/* --- Footer --- */
+footer {
+    background-color: var(--brand-dark);
+    padding: 2rem 0;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+/* --- Animations --- */
+@keyframes slideInFromLeft {
+    0% {
+        transform: translateX(-50px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+.reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+
+/* --- Responsive --- */
+
+@media (max-width: 900px) {
+    .hero-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    .hero-text p {
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .hero-mockup {
+        margin-top: 3rem;
+    }
+    .phone {
+        transform: rotateY(0) rotateX(0);
+    }
+}
+
+
+@media (max-width: 768px) {
+    h1, .logo h1 { font-size: 1.75rem; }
+    h2, .section-title { font-size: 2rem; }
+    .hero-text h2 { font-size: 2.5rem; }
+
+    .install-steps {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .container {
+        padding: 0 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .phone {
+        width: 260px;
+        height: 520px;
+    }
+    .hero {
+        padding: 4rem 0;
+    }
+    section {
+        padding: 4rem 0;
+    }
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+}

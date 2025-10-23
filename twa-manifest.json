@@ -1,0 +1,32 @@
+{
+  "packageId": "pro.ganhos.app.twa",
+  "host": "ganhospro.app",
+  "name": "GanhosPro",
+  "launcherName": "GanhosPro",
+  "display": "standalone",
+  "themeColor": "#10b981",
+  "navigationColor": "#1f2937",
+  "backgroundColor": "#1f2937",
+  "enableNotifications": true,
+  "startUrl": "/?source=pwa",
+  "iconUrl": "https://ganhospro.app/logo_ganhopro.png",
+  "maskableIconUrl": "https://ganhospro.app/logo_ganhopro.png",
+  "monochromeIconUrl": "https://ganhospro.app/logo_ganhopro.png",
+  "splashScreenFadeOutDuration": 300,
+  "appVersion": "1.0.0",
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "shortcuts": [],
+  "generatorApp": "Bubblewrap",
+  "webManifestUrl": "https://ganhospro.app/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "pwaCompat": {
+    "enabled": true
+  }
+}
