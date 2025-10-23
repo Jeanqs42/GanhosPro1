@@ -130,8 +130,8 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
         if(recordFromState){
             setId(recordFromState.id);
             setDate(recordFromState.date);
-            setTotalEarnings(recordFromState.totalEarnings.toString());
-            setKmDriven(recordFromState.kmDriven.toString());
+            setTotalEarnings(recordFromState.totalEarnings?.toString() || '');
+            setKmDriven(recordFromState.kmDriven?.toString() || '');
             setHoursWorked(recordFromState.hoursWorked?.toString() || '');
             setAdditionalCosts(recordFromState.additionalCosts?.toString() || '');
             setIsDetailsView(true); // Ensure details view is active when editing
@@ -190,7 +190,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
         }
 
         const record: RunRecord = {
-            id,
+            id, // Use the current ID state, which is from recordFromState if editing
             date,
             totalEarnings: parseFloat(totalEarnings),
             kmDriven: parseFloat(kmDriven),
