@@ -71,16 +71,17 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
         lastSyncTime,
     } = useOfflineSync();
 
+    // Inicializa isDetailsView e hasCalculated com base em recordFromState
     const [isDetailsView, setIsDetailsView] = useState(!!recordFromState);
+    const [hasCalculated, setHasCalculated] = useState(!!recordFromState);
+
     const [id, setId] = useState(recordFromState?.id || safeRandomUUID());
     const [date, setDate] = useState(recordFromState?.date || new Date().toISOString().split('T')[0]);
     const [totalEarnings, setTotalEarnings] = useState(recordFromState?.totalEarnings?.toString() || '');
     const [kmDriven, setKmDriven] = useState(recordFromState?.kmDriven?.toString() || '');
     const [hoursWorked, setHoursWorked] = useState(recordFromState?.hoursWorked?.toString() || '');
     const [additionalCosts, setAdditionalCosts] = useState(recordFromState?.additionalCosts?.toString() || '');
-    // Result calculation is now handled by useMemo below
-    const [hasCalculated, setHasCalculated] = useState(!!recordFromState);
-
+    
     const handleCalculateClick = () => {
         const earnings = parseFloat(totalEarnings);
         const km = parseFloat(kmDriven);
@@ -135,12 +136,10 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
             setKmDriven(recordFromState.kmDriven?.toString() || '');
             setHoursWorked(recordFromState.hoursWorked?.toString() || '');
             setAdditionalCosts(recordFromState.additionalCosts?.toString() || '');
-            setIsDetailsView(true); // Mostra a visualização de detalhes inicialmente
-            setHasCalculated(true); // Assume que já foi calculado para exibição
+            // NÃO defina isDetailsView ou hasCalculated aqui. Eles são inicializados acima
+            // e depois controlados por ações do usuário (botões).
         } else {
             // Se nenhum registro é passado, garanta que o formulário esteja limpo para um novo cálculo.
-            // Não chame handleReset() aqui, pois ele limpa o location.state.
-            // Em vez disso, apenas defina os estados para seus valores iniciais vazios.
             setId(safeRandomUUID()); // Gera um novo ID para um novo registro
             setDate(new Date().toISOString().split('T')[0]);
             setTotalEarnings('');
