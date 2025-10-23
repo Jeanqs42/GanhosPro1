@@ -4,7 +4,7 @@ import { RunRecord, AppSettings } from '../types';
 // Validação e leitura da API Key (Vite)
 const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.GEMINI_API_KEY;
 console.log("GEMINI_API_KEY lida em geminiService:", apiKey ? "[definida]" : "[NÃO DEFINIDA]");
-const ai: GoogleGenAI | null = apiKey ? new GoogleGenAI({ apiKey }) : null;
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export const analyzeRecords = async (records: RunRecord[], settings: AppSettings): Promise<string> => {
     if (!apiKey || !ai) {
@@ -34,10 +34,14 @@ export const analyzeRecords = async (records: RunRecord[], settings: AppSettings
     `;
 
     try {
-        const model = ai!.getGenerativeModel({ model: 'gemini-1.5-flash' }); // Usando operador de asserção de não-nulo
-        const result = await model.generateContent(prompt);
-        const response = result.response;
-        return response.text();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                systemInstruction: "Você é um especialista em finanças para motoristas de aplicativo. Seja direto, use a moeda Real (R$) e a métrica de quilômetros (KM)."
+            }
+        });
+        return response.text;
     } catch (error) {
         console.error("Gemini API error in analyzeRecords:", error);
         throw new Error("Falha ao comunicar com o serviço de IA. Verifique sua chave de API e tente novamente.");
@@ -47,60 +51,28 @@ export const analyzeRecords = async (records: RunRecord[], settings: AppSettings
 export const getChatFollowUp = async (
   originalAnalysis: string,
   chatHistory: { role: 'user' | 'model'; parts: { text: string }[] }[],
-  userQuestion: string,
-  records: RunRecord[], // Novo parâmetro
-  settings: AppSettings // Novo parâmetro
+  userQuestion: string
 ): Promise<string> => {
     if (!apiKey || !ai) {
         throw new Error("Chave de API do Gemini não configurada. Defina GEMINI_API_KEY em .env.local.");
     }
 
-    // Prepare um contexto detalhado para a IA, incluindo registros brutos e configurações
-    const detailedContext = `
-        Você é um assistente financeiro especializado em analisar dados de motoristas de aplicativo.
-        Aqui está a análise original que você forneceu:
-        ${originalAnalysis}
-
-        E aqui estão os dados brutos dos registros do motorista, juntamente com as configurações atuais:
-        Configurações: Custo por KM = R$${settings.costPerKm.toFixed(2)}
-        Registros Detalhados:
-        ${records.map(r => `- Data: ${new Date(r.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}, Ganhos: R$${r.totalEarnings.toFixed(2)}, KM: ${r.kmDriven.toFixed(1)}, Horas: ${r.hoursWorked?.toFixed(1) || 'N/A'}, Custos Adicionais: R$${r.additionalCosts?.toFixed(2) || '0.00'}`).join('\n')}
-    `;
-
     const history = [
-        { role: 'user' as const, parts: [{ text: detailedContext }] },
-        { role: 'model' as const, parts: [{ text: "Entendido. Tenho acesso à análise original, aos dados brutos dos registros e às configurações. Estou pronto para responder perguntas detalhadas." }] },
-        ...chatHistory.slice(0, -1), // Envia o histórico sem a última mensagem do usuário, que será a 'userQuestion'
+        { role: 'user' as const, parts: [{ text: `Esta é a análise original que você me forneceu:\n\n${originalAnalysis}` }] },
+        { role: 'model' as const, parts: [{ text: "Entendido. Estou pronto para responder perguntas sobre esta análise." }] },
+        ...chatHistory.slice(0, -1), // Send history without the last user message
     ];
 
     try {
-        const chat = ai!.getGenerativeModel({ model: 'gemini-1.5-flash' }).startChat({ // Usando operador de asserção de não-nulo
+        const chat = ai.chats.create({
+            model: 'gemini-2.5-flash',
             history: history,
-            generationConfig: {
-                temperature: 0.7, // Permite respostas um pouco mais variadas
-            },
-            safetySettings: [ // Configurações de segurança para evitar respostas inadequadas
-                {
-                    category: 'HARM_CATEGORY_HARASSMENT',
-                    threshold: 'BLOCK_NONE',
-                },
-                {
-                    category: 'HARM_CATEGORY_HATE_SPEECH',
-                    threshold: 'BLOCK_NONE',
-                },
-                {
-                    category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                    threshold: 'BLOCK_NONE',
-                },
-                {
-                    category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-                    threshold: 'BLOCK_NONE',
-                },
-            ],
+            config: {
+                systemInstruction: "Você é um especialista em finanças para motoristas de aplicativo. Responda às perguntas do usuário de forma curta e direta, com base na análise original e no histórico da conversa."
+            }
         });
-        const result = await chat.sendMessage(userQuestion);
-        const response = result.response;
-        return response.text();
+        const response = await chat.sendMessage({ message: userQuestion });
+        return response.text;
     } catch (error) {
         console.error("Gemini API error in getChatFollowUp:", error);
         throw new Error("Falha ao comunicar com o serviço de IA para o chat.");
@@ -132,10 +104,14 @@ export const getIntelligentReportAnalysis = async (
   `;
 
   try {
-    const model = ai!.getGenerativeModel({ model: 'gemini-1.5-flash' }); // Usando operador de asserção de não-nulo
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    return response.text();
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        systemInstruction: "Seja um especialista financeiro que fornece insights rápidos e diretos. Use a moeda Real (R$) e a métrica de quilômetros (KM)."
+      }
+    });
+    return response.text;
   } catch (error) {
     console.error("Gemini API error in getIntelligentReportAnalysis:", error);
     throw new Error("Falha ao gerar o insight para o relatório.");

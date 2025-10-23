@@ -159,8 +159,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     setChatInput('');
     setIsChatLoading(true);
     try {
-      // Passando records e settings para getChatFollowUp
-      const response = await getChatFollowUp(analysis, newHistory, question, records, settings);
+      const response = await getChatFollowUp(analysis, newHistory, question);
       setChatHistory(prev => [...prev, { role: 'model' as const, parts: [{ text: response }] }]);
     } catch (error) {
       console.error('Chat error:', error);
