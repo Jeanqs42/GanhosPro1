@@ -49,7 +49,8 @@ export const analyzeRecords = async (records: RunRecord[], settings: AppSettings
 };
 
 export const getChatFollowUp = async (
-  originalAnalysis: string,
+  records: RunRecord[], // Novo parâmetro
+  settings: AppSettings, // Novo parâmetro
   chatHistory: { role: 'user' | 'model'; parts: { text: string }[] }[],
   userQuestion: string
 ): Promise<string> => {
@@ -57,18 +58,31 @@ export const getChatFollowUp = async (
         throw new Error("Chave de API do Gemini não configurada. Defina GEMINI_API_KEY em .env.local.");
     }
 
-    const history = [
-        { role: 'user' as const, parts: [{ text: `Esta é a análise original que você me forneceu:\n\n${originalAnalysis}` }] },
-        { role: 'model' as const, parts: [{ text: "Entendido. Estou pronto para responder perguntas sobre esta análise." }] },
-        ...chatHistory.slice(0, -1), // Send history without the last user message
+    // Criar um resumo detalhado dos registros para o contexto da IA
+    const recordsSummary = records.map(r => {
+        const date = new Date(r.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+        const carCost = r.kmDriven * settings.costPerKm;
+        const netProfit = r.totalEarnings - (r.additionalCosts || 0) - carCost;
+        return `- Data: ${date}, Ganhos: R$${r.totalEarnings.toFixed(2)}, KM: ${r.kmDriven.toFixed(1)}, Lucro Líquido: R$${netProfit.toFixed(2)}, Horas Trabalhadas: ${r.hoursWorked?.toFixed(1) || 'N/A'}, Custos Adicionais: R$${(r.additionalCosts || 0).toFixed(2)}`;
+    }).join('\n');
+
+    // Adicionar uma mensagem de contexto detalhada no início do histórico
+    const contextMessage = {
+        role: 'user' as const,
+        parts: [{ text: `Aqui estão todos os registros de corrida do usuário e suas configurações. Use-os para responder às perguntas de forma detalhada, se necessário. Custo por KM: R$${settings.costPerKm.toFixed(2)}\n\nRegistros:\n${recordsSummary}` }]
+    };
+
+    const historyForChat = [
+        contextMessage, // Adiciona o contexto detalhado no início
+        ...chatHistory.slice(0, -1), // Exclui a pergunta atual do usuário, ela será enviada separadamente
     ];
 
     try {
         const chat = ai.chats.create({
             model: 'gemini-2.5-flash',
-            history: history,
+            history: historyForChat,
             config: {
-                systemInstruction: "Você é um especialista em finanças para motoristas de aplicativo. Responda às perguntas do usuário de forma curta e direta, com base na análise original e no histórico da conversa."
+                systemInstruction: "Você é um especialista em finanças para motoristas de aplicativo. Responda às perguntas do usuário de forma curta e direta, usando os dados fornecidos e o histórico da conversa. Se a pergunta exigir detalhes específicos dos registros, consulte-os."
             }
         });
         const response = await chat.sendMessage({ message: userQuestion });
