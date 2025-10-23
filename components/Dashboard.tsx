@@ -127,20 +127,30 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
     };
     
     useEffect(() => {
-        if(recordFromState){
+        if (recordFromState) {
+            // Se um registro é passado via state, preencha os campos do formulário
             setId(recordFromState.id);
             setDate(recordFromState.date);
             setTotalEarnings(recordFromState.totalEarnings?.toString() || '');
             setKmDriven(recordFromState.kmDriven?.toString() || '');
             setHoursWorked(recordFromState.hoursWorked?.toString() || '');
             setAdditionalCosts(recordFromState.additionalCosts?.toString() || '');
-            setIsDetailsView(true); // Ensure details view is active when editing
-            setHasCalculated(true);
+            setIsDetailsView(true); // Mostra a visualização de detalhes inicialmente
+            setHasCalculated(true); // Assume que já foi calculado para exibição
         } else {
-            // Reset state if no recordFromState is present (e.g., navigating to / from /history)
-            handleReset();
+            // Se nenhum registro é passado, garanta que o formulário esteja limpo para um novo cálculo.
+            // Não chame handleReset() aqui, pois ele limpa o location.state.
+            // Em vez disso, apenas defina os estados para seus valores iniciais vazios.
+            setId(safeRandomUUID()); // Gera um novo ID para um novo registro
+            setDate(new Date().toISOString().split('T')[0]);
+            setTotalEarnings('');
+            setKmDriven('');
+            setHoursWorked('');
+            setAdditionalCosts('');
+            setIsDetailsView(false); // Garante que estamos no modo de entrada
+            setHasCalculated(false); // Garante que estamos no modo de entrada
         }
-    }, [recordFromState, settings]); // Added recordFromState and settings to dependencies
+    }, [recordFromState, settings]);
 
 
     const handleSave = async () => {
