@@ -184,7 +184,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                     </div>
                 </div>
             ), {
-                duration: 10000,
+                duration: Infinity,
             });
             return;
         }
@@ -328,7 +328,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
             </div>
              {isDetails ? (
                 <>
-                    <button onClick={() => setIsDetailsView(false)} className="w-full mt-6 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-transform transform hover:scale-105">
+                    <button onClick={() => { setIsDetailsView(false); setHasCalculated(false); }} className="w-full mt-6 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-transform transform hover:scale-105">
                         <Edit size={20} className="mr-2"/>
                         Editar Registro
                     </button>

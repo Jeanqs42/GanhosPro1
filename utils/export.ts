@@ -49,8 +49,11 @@ export function exportCSV(records: RunRecord[], settings: AppSettings, opts: Exp
   link.setAttribute('download', filename);
   document.body.appendChild(link);
   link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  // Adiciona um pequeno atraso antes de revogar a URL para garantir que o download seja iniciado
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, 100); 
 }
 
 export function exportPDF(records: RunRecord[], settings: AppSettings, opts: ExportOptions = {}) {

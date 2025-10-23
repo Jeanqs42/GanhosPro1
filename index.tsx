@@ -1,4 +1,3 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -39,6 +38,7 @@ root.render(
           background: '#333',
           color: '#fff',
         },
+        duration: 2000, // Duração padrão de 2 segundos para toasts
       }}
     />
   </React.StrictMode>
