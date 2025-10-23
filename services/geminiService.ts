@@ -1,10 +1,10 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/genai"; // Corrigido para importação nomeada
 import { RunRecord, AppSettings } from '../types';
 
 // Validação e leitura da API Key (Vite)
 const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.GEMINI_API_KEY;
 console.log("GEMINI_API_KEY lida em geminiService:", apiKey ? "[definida]" : "[NÃO DEFINIDA]");
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+const ai = apiKey ? new GoogleGenerativeAI({ apiKey }) : null;
 
 export const analyzeRecords = async (records: RunRecord[], settings: AppSettings): Promise<string> => {
     if (!apiKey || !ai) {
@@ -49,8 +49,8 @@ export const analyzeRecords = async (records: RunRecord[], settings: AppSettings
 };
 
 export const getChatFollowUp = async (
-  records: RunRecord[], // Novo parâmetro
-  settings: AppSettings, // Novo parâmetro
+  records: RunRecord[],
+  settings: AppSettings,
   chatHistory: { role: 'user' | 'model'; parts: { text: string }[] }[],
   userQuestion: string
 ): Promise<string> => {
@@ -58,7 +58,6 @@ export const getChatFollowUp = async (
         throw new Error("Chave de API do Gemini não configurada. Defina GEMINI_API_KEY em .env.local.");
     }
 
-    // Criar um resumo detalhado dos registros para o contexto da IA
     const recordsSummary = records.map(r => {
         const date = new Date(r.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
         const carCost = r.kmDriven * settings.costPerKm;
@@ -66,22 +65,21 @@ export const getChatFollowUp = async (
         return `- Data: ${date}, Ganhos: R$${r.totalEarnings.toFixed(2)}, KM: ${r.kmDriven.toFixed(1)}, Lucro Líquido: R$${netProfit.toFixed(2)}, Horas Trabalhadas: ${r.hoursWorked?.toFixed(1) || 'N/A'}, Custos Adicionais: R$${(r.additionalCosts || 0).toFixed(2)}`;
     }).join('\n');
 
-    // Adicionar uma mensagem de contexto detalhada no início do histórico
     const contextMessage = {
         role: 'user' as const,
         parts: [{ text: `Aqui estão todos os registros de corrida do usuário e suas configurações. Use-os para responder às perguntas de forma detalhada, se necessário. Custo por KM: R$${settings.costPerKm.toFixed(2)}\n\nRegistros:\n${recordsSummary}` }]
     };
 
     const historyForChat = [
-        contextMessage, // Adiciona o contexto detalhado no início
-        ...chatHistory.slice(0, -1), // Exclui a pergunta atual do usuário, ela será enviada separadamente
+        contextMessage,
+        ...chatHistory.slice(0, -1),
     ];
 
     try {
-        const chat = ai.chats.create({
-            model: 'gemini-2.5-flash',
+        const model = ai!.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const chat = model.startChat({
             history: historyForChat,
-            config: {
+            generationConfig: {
                 systemInstruction: "Você é um especialista em finanças para motoristas de aplicativo. Responda às perguntas do usuário de forma curta e direta, usando os dados fornecidos e o histórico da conversa. Se a pergunta exigir detalhes específicos dos registros, consulte-os."
             }
         });
