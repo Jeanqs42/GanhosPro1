@@ -12,35 +12,39 @@ interface PremiumProps {
   settings: AppSettings;
   isPremium: boolean;
   setIsPremium: (isPremium: boolean) => void;
-  setSettings: (settings: AppSettings) => void;
+  // setSettings: (settings: AppSettings) => void; // Removido: prop não utilizada
 }
 
 type ActiveTool = 'menu' | 'insights' | 'reports' | 'periodic';
 type PeriodType = 'weekly' | 'monthly' | 'annual';
 
-const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPremium, setSettings }) => {
+const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPremium }) => { // Removido setSettings da desestruturação
   const navigate = useNavigate();
   const [activeTool, setActiveTool] = useState<ActiveTool>('menu');
 
   // Persistência simples de chat e análise
-  const [analysis, setAnalysis] = useState(localStorage.getItem('ganhospro_analysis') || '');
+  const [analysis, setAnalysis] = useState<string>(localStorage.getItem('ganhospro_analysis') || '');
   const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'model'; parts: { text: string }[] }[]>(() => {
     try {
       const raw = localStorage.getItem('ganhospro_chat_history');
       return raw ? JSON.parse(raw) : [];
     } catch { return []; }
   });
-  const [isInsightsLoading, setIsInsightsLoading] = useState(false);
-  const [chatInput, setChatInput] = useState('');
-  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [isInsightsLoading, setIsInsightsLoading] = useState<boolean>(false);
+  const [chatInput, setChatInput] = useState<string>('');
+  const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Reports
-  const [isReportLoading, setIsReportLoading] = useState(false);
+  const [isReportLoading, setIsReportLoading] = useState<boolean>(false);
   const [reportData, setReportData] = useState<any[]>([]);
-  const [reportInsight, setReportInsight] = useState('');
+  const [reportInsight, setReportInsight] = useState<string>('');
   const [reportTotals, setReportTotals] = useState<{total: number, average: number, days: number} | null>(null);
-  const [reportConfig, setReportConfig] = useState({
+  const [reportConfig, setReportConfig] = useState<{
+    startDate: string;
+    endDate: string;
+    metric: string;
+  }>({
     startDate: records.length > 0 ? [...records].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0].date : new Date().toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
     metric: 'netProfit'
@@ -91,8 +95,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       return date.getUTCFullYear().toString();
     };
 
-    const sortedRecords = [...records].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    const aggregated = sortedRecords.reduce((acc, record) => {
+    const sortedRecords = [...records].sort((a: RunRecord, b: RunRecord) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const aggregated = sortedRecords.reduce((acc: any, record: RunRecord) => {
       const key = getPeriodKey(record.date, periodType);
       if (!acc[key]) {
         acc[key] = { key, totalEarnings: 0, totalCosts: 0, kmDriven: 0, daysCount: 0 };
@@ -193,11 +197,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     start.setUTCHours(0, 0, 0, 0);
     end.setUTCHours(0, 0, 0, 0);
 
-    const filteredRecords = records.filter(r => {
+    const filteredRecords = records.filter((r: RunRecord) => {
       const recordDate = new Date(r.date);
       recordDate.setUTCHours(0, 0, 0, 0);
       return recordDate >= start && recordDate <= end;
-    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }).sort((a: RunRecord, b: RunRecord) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     if (filteredRecords.length === 0) {
       toast.error('Nenhum registro encontrado para o período selecionado.');
@@ -205,7 +209,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       return;
     }
 
-    const data = filteredRecords.map(r => {
+    const data = filteredRecords.map((r: RunRecord) => {
       const carCost = r.kmDriven * settings.costPerKm;
       const additionalCosts = r.additionalCosts || 0;
       const totalCosts = carCost + additionalCosts;
@@ -229,14 +233,14 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
 
     setReportData(data);
 
-    const total = data.reduce((sum, item) => sum + item.value, 0);
+    const total = data.reduce((sum: number, item: { value: number }) => sum + item.value, 0);
     const average = data.length > 0 ? total / data.length : 0;
     const days = data.length;
 
     setReportTotals({ total: parseFloat(total.toFixed(2)), average: parseFloat(average.toFixed(2)), days });
 
     try {
-      const reportForAI = data.map(d => ({ ...d, metric: reportConfig.metric, unit: metricsInfo[reportConfig.metric].unit }));
+      const reportForAI = data.map((d: { date: string; value: number }) => ({ ...d, metric: reportConfig.metric, unit: metricsInfo[reportConfig.metric].unit }));
       const insight = await getIntelligentReportAnalysis(reportForAI, metricsInfo[reportConfig.metric].label);
       setReportInsight(insight);
     } catch(e) {
@@ -378,7 +382,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
             <input
               type="text"
               value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setChatInput(e.target.value)}
               placeholder="Pergunte algo sobre o relatório..."
               className="flex-grow bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-primary focus:outline-none transition"
               disabled={isChatLoading}
@@ -399,16 +403,16 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label htmlFor="startDate" className="block text-sm font-medium text-gray-300 mb-1">Início</label>
-                    <input type="date" id="startDate" value={reportConfig.startDate} onChange={e => setReportConfig(p => ({...p, startDate: e.target.value}))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none"/>
+                    <input type="date" id="startDate" value={reportConfig.startDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReportConfig(p => ({...p, startDate: e.target.value}))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none"/>
                 </div>
                 <div>
                     <label htmlFor="endDate" className="block text-sm font-medium text-gray-300 mb-1">Fim</label>
-                    <input type="date" id="endDate" value={reportConfig.endDate} onChange={e => setReportConfig(p => ({...p, endDate: e.target.value}))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none"/>
+                    <input type="date" id="endDate" value={reportConfig.endDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReportConfig(p => ({...p, endDate: e.target.value}))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none"/>
                 </div>
             </div>
             <div>
                  <label htmlFor="metric" className="block text-sm font-medium text-gray-300 mb-1">Métrica</label>
-                 <select id="metric" value={reportConfig.metric} onChange={e => setReportConfig(p => ({...p, metric: e.target.value}))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none">
+                 <select id="metric" value={reportConfig.metric} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setReportConfig(p => ({...p, metric: e.target.value}))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none">
                     <option value="netProfit">Lucro Líquido por Dia</option>
                     <option value="profitPerKm">Lucro por KM</option>
                     <option value="grossEarnings">Ganhos Brutos por Dia</option>
@@ -438,11 +442,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <BarChart data={reportData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                             <XAxis dataKey="date" stroke="#a0aec0" fontSize={12} />
-                            <YAxis stroke="#a0aec0" fontSize={12} tickFormatter={(value) => metricsInfo[reportConfig.metric].unit === 'KM' ? `${value} KM` : `R$${value}`} />
+                            <YAxis stroke="#a0aec0" fontSize={12} tickFormatter={(value: number) => metricsInfo[reportConfig.metric].unit === 'KM' ? `${value} KM` : `R$${value}`} />
                             <Tooltip
                                 contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #4a5568', color: '#f9fafb' }}
                                 labelStyle={{ color: '#10b981' }}
-                                formatter={(value) => [
+                                formatter={(value: number) => [
                                     metricsInfo[reportConfig.metric].unit === 'KM' ? `${Number(value).toFixed(1)} KM` : `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`,
                                     metricsInfo[reportConfig.metric].label
                                 ]}
@@ -499,7 +503,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
   );
 
   const renderPeriodicTool = () => {
-    const totals = periodicData.reduce((acc, item) => {
+    const totals = periodicData.reduce((acc: { ganhos: number; custos: number; lucroLiquido: number }, item: any) => {
         acc.ganhos += item.ganhos;
         acc.custos += item.custos;
         acc.lucroLiquido += item.lucroLiquido;
@@ -564,9 +568,9 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
                                     <Bar dataKey="lucroLiquido" name="Lucro Líquido">
-                                        {periodicData.map((entry, index) => (
+                                        {periodicData.map((entry: any, index: number) => (
                                             <Cell key={`cell-${index}`} fill={entry.lucroLiquido >= 0 ? '#10b981' : '#ef4444'} />
                                         ))}
                                     </Bar>
@@ -583,7 +587,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
                                     <Bar dataKey="lucroPorKm" name="Lucro/KM" fill="#8b5cf6" />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -599,7 +603,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value) => `${Number(value).toFixed(1)} KM`} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toFixed(1)} KM`} />
                                     <Bar dataKey="kmRodados" name="KM" fill="#06b6d4" />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -615,7 +619,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
                                     <Bar dataKey="ganhosPorKmBruto" name="R$/KM Bruto" fill="#22c55e" />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -631,7 +635,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
                                     <Bar dataKey="custoPorKm" name="Custo/KM" fill="#f97316" />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -646,8 +650,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value) => `${value}%`} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value) => `${Number(value).toFixed(1)}%`} />
+                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value}%`} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toFixed(1)}%`} />
                                     <Bar dataKey="margemLucro" name="Margem %" fill="#e11d48" />
                                 </BarChart>
                             </ResponsiveContainer>

@@ -50,72 +50,7 @@ export const useOfflineSync = () => {
   const syncTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const initPromiseRef = useRef<Promise<void> | undefined>(undefined);
 
-  // Inicialização do IndexedDB
-  const initializeDB = useCallback(async () => {
-    if (initPromiseRef.current) {
-      return initPromiseRef.current;
-    }
-
-    initPromiseRef.current = (async () => {
-      try {
-        const success = await dbManager.init();
-        
-        // Carregar operações pendentes do localStorage
-        const pendingOps = loadPendingOperations();
-        
-        setState((prev: OfflineSyncState) => ({
-          ...prev,
-          isInitialized: true,
-          pendingOperations: pendingOps,
-        }));
-
-        // Se estiver online, tentar sincronizar operações pendentes
-        if (navigator.onLine && pendingOps.length > 0) {
-          processPendingOperations(pendingOps);
-        }
-      } catch (error) {
-        console.error('Erro ao inicializar sincronização offline:', error);
-        setState((prev: OfflineSyncState) => ({ ...prev, isInitialized: true }));
-      }
-    })();
-
-    return initPromiseRef.current;
-  }, [loadPendingOperations, processPendingOperations]);
-
-  // Detectar mudanças na conectividade
-  useEffect(() => {
-    const handleOnline = () => {
-      setState((prev: OfflineSyncState) => {
-        const newState = { ...prev, isOnline: true };
-        
-        // Processar operações pendentes quando voltar online
-        if (prev.pendingOperations.length > 0) {
-          processPendingOperations(prev.pendingOperations);
-        }
-        
-        return newState;
-      });
-    };
-
-    const handleOffline = () => {
-      setState((prev: OfflineSyncState) => ({ ...prev, isOnline: false }));
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [processPendingOperations]); // Removido state.pendingOperations para evitar loop, processPendingOperations já tem a lógica
-
-  // Inicializar quando o componente montar
-  useEffect(() => {
-    initializeDB();
-  }, [initializeDB]);
-
-  // Salvar operações pendentes no localStorage
+  // Salvar operações pendentes no localStorage (definido primeiro)
   const savePendingOperations = useCallback((operations: OfflineOperation[]) => {
     try {
       const clean = dedupeOperations(operations);
@@ -125,7 +60,7 @@ export const useOfflineSync = () => {
     }
   }, []);
 
-  // Carregar operações pendentes do localStorage
+  // Carregar operações pendentes do localStorage (definido primeiro)
   const loadPendingOperations = useCallback((): OfflineOperation[] => {
     try {
       const stored = localStorage.getItem('ganhospro_pending_ops');
@@ -137,31 +72,7 @@ export const useOfflineSync = () => {
     }
   }, []);
 
-  // Adicionar operação à fila de pendentes
-  const addPendingOperation = useCallback((operation: Omit<OfflineOperation, 'id' | 'timestamp' | 'retryCount'>) => {
-    const newOperation: OfflineOperation = {
-      ...operation,
-      id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: Date.now(),
-      retryCount: 0,
-    };
-
-    setState((prev: OfflineSyncState) => {
-      const newPendingOps = dedupeOperations([...prev.pendingOperations, newOperation]);
-      savePendingOperations(newPendingOps);
-      return {
-        ...prev,
-        pendingOperations: newPendingOps,
-      };
-    });
-
-    // Se estiver online, tentar processar imediatamente
-    if (state.isOnline) {
-      processPendingOperations([newOperation]);
-    }
-  }, [state.isOnline, savePendingOperations, processPendingOperations]);
-
-  // Processar operações pendentes
+  // Processar operações pendentes (definido antes de initializeDB e addPendingOperation)
   const processPendingOperations = useCallback(async (operations: OfflineOperation[]) => {
     if (state.syncInProgress || !state.isOnline) return;
 
@@ -232,7 +143,96 @@ export const useOfflineSync = () => {
         processPendingOperations(failedOps);
       }, nextDelay);
     }
-  }, [state.syncInProgress, state.isOnline, savePendingOperations]);
+  }, [state.syncInProgress, state.isOnline, savePendingOperations]); // Dependências corretas
+
+  // Adicionar operação à fila de pendentes (definido antes de initializeDB)
+  const addPendingOperation = useCallback((operation: Omit<OfflineOperation, 'id' | 'timestamp' | 'retryCount'>) => {
+    const newOperation: OfflineOperation = {
+      ...operation,
+      id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      retryCount: 0,
+    };
+
+    setState((prev: OfflineSyncState) => {
+      const newPendingOps = dedupeOperations([...prev.pendingOperations, newOperation]);
+      savePendingOperations(newPendingOps);
+      return {
+        ...prev,
+        pendingOperations: newPendingOps,
+      };
+    });
+
+    // Se estiver online, tentar processar imediatamente
+    if (state.isOnline) {
+      processPendingOperations([newOperation]);
+    }
+  }, [state.isOnline, savePendingOperations, processPendingOperations]); // Dependências corretas
+
+  // Inicialização do IndexedDB (agora pode usar loadPendingOperations e processPendingOperations)
+  const initializeDB = useCallback(async () => {
+    if (initPromiseRef.current) {
+      return initPromiseRef.current;
+    }
+
+    initPromiseRef.current = (async () => {
+      try {
+        await dbManager.init(); // Removido 'const success ='
+        
+        // Carregar operações pendentes do localStorage
+        const pendingOps = loadPendingOperations();
+        
+        setState((prev: OfflineSyncState) => ({
+          ...prev,
+          isInitialized: true,
+          pendingOperations: pendingOps,
+        }));
+
+        // Se estiver online, tentar sincronizar operações pendentes
+        if (navigator.onLine && pendingOps.length > 0) {
+          processPendingOperations(pendingOps);
+        }
+      } catch (error) {
+        console.error('Erro ao inicializar sincronização offline:', error);
+        setState((prev: OfflineSyncState) => ({ ...prev, isInitialized: true }));
+      }
+    })();
+
+    return initPromiseRef.current;
+  }, [loadPendingOperations, processPendingOperations]); // Dependências corretas
+
+  // Detectar mudanças na conectividade
+  useEffect(() => {
+    const handleOnline = () => {
+      setState((prev: OfflineSyncState) => {
+        const newState = { ...prev, isOnline: true };
+        
+        // Processar operações pendentes quando voltar online
+        if (prev.pendingOperations.length > 0) {
+          processPendingOperations(prev.pendingOperations);
+        }
+        
+        return newState;
+      });
+    };
+
+    const handleOffline = () => {
+      setState((prev: OfflineSyncState) => ({ ...prev, isOnline: false }));
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [processPendingOperations]); // Dependência correta
+
+  // Inicializar quando o componente montar
+  useEffect(() => {
+    initializeDB();
+  }, [initializeDB]);
 
   // Operações de dados com suporte offline
   const saveRecord = useCallback(async (record: RunRecord): Promise<boolean> => {
