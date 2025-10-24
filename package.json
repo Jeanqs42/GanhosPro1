@@ -11,7 +11,7 @@
   "dependencies": {
     "@capacitor/android": "^7.4.4",
     "@capacitor/core": "^7.4.4",
-    "@google/genai": "^1.25.0",
+    "@google/generative-ai": "^0.15.0",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
     "lucide-react": "^0.546.0",

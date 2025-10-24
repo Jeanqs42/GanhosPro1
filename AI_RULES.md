@@ -12,7 +12,7 @@ Este documento descreve a pilha de tecnologia utilizada no projeto GanhosPro e a
 *   **React Hot Toast**: Biblioteca para exibir notificações de feedback ao usuário.
 *   **Recharts**: Biblioteca de gráficos para visualização de dados.
 *   **jsPDF & jspdf-autotable**: Utilizadas para geração de documentos PDF.
-*   **Google GenAI**: SDK para integração com modelos de IA do Google, como o Gemini.
+*   **Google Generative AI**: SDK para integração com modelos de IA do Google, como o Gemini.
 *   **Vite**: Ferramenta de build rápida para desenvolvimento front-end.
 *   **Progressive Web App (PWA)**: A aplicação é configurada para funcionar offline e ser instalável em dispositivos móveis.
 *   **Local Storage**: Utilizado para persistência de dados do usuário no navegador.
@@ -29,7 +29,7 @@ Para manter a consistência e a eficiência, siga estas regras ao usar as biblio
 *   **Notificações**: Para feedback ao usuário (sucesso, erro, informação), utilize `react-hot-toast`.
 *   **Gráficos**: Para visualização de dados em gráficos, utilize `recharts`.
 *   **Geração de PDF**: Para exportar dados em formato PDF, utilize `jspdf` em conjunto com `jspdf-autotable`.
-*   **Integração com IA**: Todas as interações com modelos de IA devem ser feitas através do SDK `@google/genai`.
+*   **Integração com IA**: Todas as interações com modelos de IA devem ser feitas através do SDK `@google/generative-ai`.
 *   **Persistência de Dados**: Para armazenar dados localmente no navegador, utilize o hook `useLocalStorage` existente.
 *   **Estrutura de Arquivos**:
     *   Novos componentes devem ser criados em `src/components/`.
