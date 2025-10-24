@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { RunRecord, AppSettings } from '../types';
-import { Trash2, Calendar, Route, FileDown, FileText, Wifi, WifiOff, Clock3 } from 'lucide-react';
+import { Trash2, Calendar, Route, FileDown, FileText } from 'lucide-react'; // Removido Wifi, WifiOff, Clock3
 import { exportCSV, exportPDF } from '../utils/export';
 import { useOfflineSync } from '../hooks/useOfflineSync'; // Importar useOfflineSync
 
@@ -15,13 +15,14 @@ interface HistoryProps {
 const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) => {
   const navigate = useNavigate();
   
+  // Hook de sincronização offline - mantido para outras funcionalidades, mas o status visual será removido
   const {
-    isOnline,
-    hasPendingOperations,
-    syncInProgress,
-    forcSync,
-    pendingOperations,
-    lastSyncTime,
+    // isOnline, // Removido
+    // hasPendingOperations, // Removido
+    // syncInProgress, // Removido
+    // forcSync, // Removido
+    // pendingOperations, // Removido
+    // lastSyncTime, // Removido
   } = useOfflineSync();
 
   const sortedRecords = useMemo(() => {
@@ -143,23 +144,7 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
         </div>
       </div>
 
-      <div className="flex items-center mb-6 text-xs text-gray-400" aria-live="polite">
-        {isOnline ? (
-          <span className="flex items-center mr-3"><Wifi size={14} className="mr-1"/> Online</span>
-        ) : (
-          <span className="flex items-center mr-3"><WifiOff size={14} className="mr-1"/> Offline</span>
-        )}
-        {syncInProgress ? (
-          <span>Sincronizando…</span>
-        ) : hasPendingOperations ? (
-          <span className="flex items-center">
-            {pendingOperations.length} operações aguardando sincronização
-            <button onClick={forcSync} className="ml-2 underline">Sincronizar</button>
-          </span>
-        ) : lastSyncTime ? (
-          <span className="flex items-center"><Clock3 size={14} className="mr-1"/> Última sync: {new Date(lastSyncTime).toLocaleTimeString('pt-BR')}</span>
-        ) : null}
-      </div>
+      {/* Removido o bloco de status de conectividade */}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-gray-800 p-4 rounded-lg text-center">

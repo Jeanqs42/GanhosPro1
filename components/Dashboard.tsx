@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { DollarSign, Route, Clock, Wrench, Calculator, Save, Info, Edit, ArrowLeft, Wifi, WifiOff, Clock3 } from 'lucide-react';
+import { DollarSign, Route, Clock, Wrench, Calculator, Save, Info, Edit, ArrowLeft } from 'lucide-react'; // Removido Wifi, WifiOff, Clock3
 import { RunRecord, AppSettings, CalculationResult } from '../types';
 import { safeRandomUUID } from '../utils/uuid';
 import { useOfflineSync } from '../hooks/useOfflineSync';
@@ -57,14 +57,14 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
     const navigate = useNavigate();
     const recordFromState = location.state?.record as RunRecord | undefined;
     
-    // Hook de sincronização offline
+    // Hook de sincronização offline - mantido para outras funcionalidades, mas o status visual será removido
     const {
-        isOnline,
-        hasPendingOperations,
-        syncInProgress,
-        forcSync,
-        lastSyncTime,
-        pendingOperations, // Adicionado: desestruturando pendingOperations
+        // isOnline, // Removido
+        // hasPendingOperations, // Removido
+        // syncInProgress, // Removido
+        // forcSync, // Removido
+        // lastSyncTime, // Removido
+        // pendingOperations, // Removido
     } = useOfflineSync();
 
     // Inicializa isDetailsView e hasCalculated com base em recordFromState
@@ -357,20 +357,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
              <h1 className="text-2xl font-bold text-center mb-2 text-brand-primary">
                  {isDetailsView ? 'Detalhes do Registro' : (hasCalculated && result ? 'Seu Resultado' : (recordFromState ? 'Editar Registro' : 'Calculadora Diária'))}
             </h1>
-            <div className="flex items-center justify-center mb-4 text-xs text-gray-400" aria-live="polite">
-                {isOnline ? (
-                    <span className="flex items-center"><Wifi size={14} className="mr-1"/> Online</span>
-                ) : (
-                    <span className="flex items-center"><WifiOff size={14} className="mr-1"/> Offline</span>
-                )}
-                {syncInProgress ? (
-                    <span className="ml-3">Sincronizando…</span>
-                ) : hasPendingOperations ? (
-                    <span className="ml-3 flex items-center"><Clock3 size={14} className="mr-1"/> {pendingOperations.length} operações aguardando sincronização <button onClick={forcSync} className="ml-1 underline">Sincronizar</button></span>
-                ) : lastSyncTime ? (
-                    <span className="ml-3 flex items-center"><Clock3 size={14} className="mr-1"/> Última sync: {new Date(lastSyncTime).toLocaleTimeString('pt-BR')}</span>
-                ) : null}
-            </div>
+            {/* Removido o bloco de status de conectividade */}
 
             {settings.costPerKm === 0 && (
                 <div className="bg-yellow-900 border border-yellow-700 text-yellow-200 px-4 py-3 rounded-lg relative mb-4 text-sm flex items-start" role="alert">
