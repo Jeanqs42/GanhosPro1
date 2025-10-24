@@ -160,21 +160,18 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     const question = chatInput;
     const newUserMessage = { role: 'user' as const, parts: [{ text: question }] };
     
-    // Adiciona a mensagem do usuário ao histórico para exibição imediata
-    // Cria uma nova array para passar para a função, incluindo a nova mensagem
     const newHistory = [...chatHistory, newUserMessage];
-    setChatHistory(newHistory); // Atualiza o estado com a nova mensagem
+    setChatHistory(newHistory);
     setChatInput('');
     setIsChatLoading(true);
 
     try {
-      // Passa o histórico COMPLETO (incluindo a última mensagem do usuário)
-      const response = await getChatFollowUp(records, settings, newHistory); // Removido 'question'
+      const response = await getChatFollowUp(records, settings, newHistory);
       setChatHistory(prev => [...prev, { role: 'model' as const, parts: [{ text: response }] }]);
-    } catch (error) {
+    } catch (error: any) { // Adicionado ': any' para acessar 'message'
       console.error('Chat error:', error);
-      toast.error('Erro ao obter resposta. Tente novamente.');
-      // Em caso de erro, remove a mensagem do usuário do histórico para permitir nova tentativa
+      // Exibe a mensagem de erro específica retornada pelo serviço Gemini
+      toast.error(`Erro: ${error.message || 'Ocorreu um erro desconhecido.'}`);
       setChatHistory(prev => prev.slice(0, -1));
     } finally {
       setIsChatLoading(false);
