@@ -85,10 +85,14 @@ export const getChatFollowUp = async (
     ];
 
     try {
-        const model = ai!.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        // A instrução do sistema deve ser passada ao obter o modelo, não ao iniciar o chat.
+        const model = ai!.getGenerativeModel({ 
+            model: 'gemini-2.5-flash', 
+            systemInstruction: "Você é um especialista em finanças para motoristas de aplicativo. Responda às perguntas do usuário de forma curta e direta, usando os dados fornecidos e o histórico da conversa. Se a pergunta exigir detalhes específicos dos registros, consulte-os."
+        });
         const chat = model.startChat({
             history: historyForChat,
-            systemInstruction: "Você é um especialista em finanças para motoristas de aplicativo. Responda às perguntas do usuário de forma curta e direta, usando os dados fornecidos e o histórico da conversa. Se a pergunta exigir detalhes específicos dos registros, consulte-os."
+            // systemInstruction removido daqui
         });
         const result = await chat.sendMessage(latestUserMessage.parts[0].text);
         const response = await result.response;
