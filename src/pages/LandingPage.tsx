@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DollarSign, Route, Clock, BarChart2, Smartphone, Download, Apple, Crown, BrainCircuit, FileBarChart2, CalendarDays, Calculator } from 'lucide-react'; // CORREÇÃO 8: Removido Android, mantido Smartphone
+import { DollarSign, BarChart2, Smartphone, Apple, Crown, BrainCircuit, FileBarChart2, CalendarDays, Calculator } from 'lucide-react'; // Removido Route, Clock, Download, Android
 
 interface LandingPageProps {
   onEnterApp: () => void;
@@ -146,7 +146,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
           <div className="flex flex-col md:flex-row gap-8 justify-center">
             <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700 w-full md:max-w-sm">
               <div className="flex items-center justify-center w-16 h-16 rounded-full bg-lime-400/10 text-lime-400 mx-auto mb-6">
-                <Smartphone size={32} /> {/* CORREÇÃO 8: Usando Smartphone */}
+                <Smartphone size={32} />
               </div>
               <h3 className="text-2xl font-semibold mb-4 text-white">Android</h3>
               <ol className="list-decimal list-inside text-left text-gray-400 space-y-2">

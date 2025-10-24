@@ -10,8 +10,8 @@ import { useOfflineSync } from '../hooks/useOfflineSync';
 interface DashboardProps {
   records: RunRecord[];
   settings: AppSettings;
-  addOrUpdateRecord: (record: RunRecord) => void; // Agora recebe a função do AppLayout
-  deleteRecord: (id: string) => void; // Agora recebe a função do AppLayout
+  addOrUpdateRecord: (record: RunRecord) => Promise<boolean>; // Agora recebe a função do AppLayout
+  deleteRecord: (id: string) => Promise<boolean>; // Agora recebe a função do AppLayout
   isPremium: boolean;
 }
 
@@ -60,7 +60,6 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
     // Hook de sincronização offline
     const {
         isOnline,
-        isInitialized,
         hasPendingOperations,
         syncInProgress,
         forcSync,
@@ -68,15 +67,15 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
     } = useOfflineSync();
 
     // Inicializa isDetailsView e hasCalculated com base em recordFromState
-    const [isDetailsView, setIsDetailsView] = useState(!!recordFromState);
-    const [hasCalculated, setHasCalculated] = useState(!!recordFromState);
+    const [isDetailsView, setIsDetailsView] = useState<boolean>(!!recordFromState);
+    const [hasCalculated, setHasCalculated] = useState<boolean>(!!recordFromState);
 
-    const [id, setId] = useState(recordFromState?.id || safeRandomUUID());
-    const [date, setDate] = useState(recordFromState?.date || new Date().toISOString().split('T')[0]);
-    const [totalEarnings, setTotalEarnings] = useState(recordFromState?.totalEarnings?.toString() || '');
-    const [kmDriven, setKmDriven] = useState(recordFromState?.kmDriven?.toString() || '');
-    const [hoursWorked, setHoursWorked] = useState(recordFromState?.hoursWorked?.toString() || '');
-    const [additionalCosts, setAdditionalCosts] = useState(recordFromState?.additionalCosts?.toString() || '');
+    const [id, setId] = useState<string>(recordFromState?.id || safeRandomUUID());
+    const [date, setDate] = useState<string>(recordFromState?.date || new Date().toISOString().split('T')[0]);
+    const [totalEarnings, setTotalEarnings] = useState<string>(recordFromState?.totalEarnings?.toString() || '');
+    const [kmDriven, setKmDriven] = useState<string>(recordFromState?.kmDriven?.toString() || '');
+    const [hoursWorked, setHoursWorked] = useState<string>(recordFromState?.hoursWorked?.toString() || '');
+    const [additionalCosts, setAdditionalCosts] = useState<string>(recordFromState?.additionalCosts?.toString() || '');
     
     const handleCalculateClick = () => {
         const earnings = parseFloat(totalEarnings);
@@ -87,10 +86,10 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
             return;
         }
 
-        const existingRecord = records.find(r => r.date === date && r.id !== id);
+        const existingRecord = records.find((r: RunRecord) => r.date === date && r.id !== id);
 
         if (existingRecord) {
-             toast((t) => (
+             toast((t: any) => (
                 <div className="flex flex-col items-center text-center p-2">
                     <h3 className="font-bold text-lg mb-2 text-yellow-400">Aviso de Sobrescrita</h3>
                     <p className="text-sm mb-4">
@@ -161,7 +160,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
         const { isUpdating, recordToOverwrite, canSaveNewRecord } = recordValidation;
 
         if (!canSaveNewRecord) {
-            toast((t) => (
+            toast((t: any) => (
                 <div className="flex flex-col items-center text-center p-2">
                     <h3 className="font-bold text-lg mb-2 text-brand-primary">Limite Gratuito Atingido</h3>
                     <p className="text-sm mb-4">
@@ -301,8 +300,8 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
 
     // Memoized record validation
     const recordValidation = useMemo(() => {
-        const isUpdating = records.some(r => r.id === id);
-        const recordToOverwrite = records.find(r => r.date === date && r.id !== id);
+        const isUpdating = records.some((r: RunRecord) => r.id === id);
+        const recordToOverwrite = records.find((r: RunRecord) => r.date === date && r.id !== id);
         const canSaveNewRecord = isPremium || isUpdating || recordToOverwrite || records.length < 15;
         
         return { isUpdating, recordToOverwrite, canSaveNewRecord };
@@ -386,15 +385,15 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
 
             {!hasCalculated && (
                 <div className="bg-gray-800 p-6 rounded-lg shadow-xl mb-4 animate-fade-in-up"> {/* Alterado mb-6 para mb-4 */}
-                    <InputField icon={<DollarSign size={18}/>} label="Ganhos do Dia (R$)" id="totalEarnings" value={totalEarnings} onChange={e => setTotalEarnings(e.target.value)} placeholder="Ex: 250.50" isHighlighted />
-                    <InputField icon={<Route size={18}/>} label="KM Rodado" id="kmDriven" value={kmDriven} onChange={e => setKmDriven(e.target.value)} placeholder="Ex: 180" isHighlighted />
-                    <InputField icon={<Clock size={18}/>} label="Horas Trabalhadas (Opcional)" id="hoursWorked" value={hoursWorked} onChange={e => setHoursWorked(e.target.value)} placeholder="Ex: 8.5" />
-                    <InputField icon={<Wrench size={18}/>} label="Custos Adicionais (Opcional)" id="additionalCosts" value={additionalCosts} onChange={e => setAdditionalCosts(e.target.value)} placeholder="Ex: 25 (água, balas)" />
+                    <InputField icon={<DollarSign size={18}/>} label="Ganhos do Dia (R$)" id="totalEarnings" value={totalEarnings} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTotalEarnings(e.target.value)} placeholder="Ex: 250.50" isHighlighted />
+                    <InputField icon={<Route size={18}/>} label="KM Rodado" id="kmDriven" value={kmDriven} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setKmDriven(e.target.value)} placeholder="Ex: 180" isHighlighted />
+                    <InputField icon={<Clock size={18}/>} label="Horas Trabalhadas (Opcional)" id="hoursWorked" value={hoursWorked} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHoursWorked(e.target.value)} placeholder="Ex: 8.5" />
+                    <InputField icon={<Wrench size={18}/>} label="Custos Adicionais (Opcional)" id="additionalCosts" value={additionalCosts} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAdditionalCosts(e.target.value)} placeholder="Ex: 25 (água, balas)" />
                     <div className="mb-4">
                         <label htmlFor="date" className="flex items-center text-sm font-medium text-gray-300 mb-2">
                             <span className="ml-2">Data</span>
                         </label>
-                        <input type="date" id="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-primary focus:outline-none transition" />
+                        <input type="date" id="date" value={date} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDate(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-primary focus:outline-none transition" />
                     </div>
                     <button onClick={handleCalculateClick} className="w-full bg-brand-primary hover:bg-brand-secondary text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-transform transform hover:scale-105">
                         <Calculator size={20} className="mr-2"/>

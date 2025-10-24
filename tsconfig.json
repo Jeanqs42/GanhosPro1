@@ -20,6 +20,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "App.tsx", "components", "hooks", "types.ts", "utils", "services"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["src", "App.tsx", "components", "hooks", "types.ts", "utils", "services"]
+  // A linha "references": [{ "path": "./tsconfig.node.json" }] foi removida.
 }

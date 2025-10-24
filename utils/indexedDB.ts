@@ -27,7 +27,7 @@ class IndexedDBManager {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => { // 'reject' renomeado para '_reject'
         const request = indexedDB.open(DB_NAME, DB_VERSION);
 
         request.onerror = () => {
@@ -76,7 +76,7 @@ class IndexedDBManager {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => { // 'reject' renomeado para '_reject'
         const transaction = this.db!.transaction([RECORDS_STORE], 'readwrite');
         const store = transaction.objectStore(RECORDS_STORE);
         const request = store.put(record);
@@ -103,7 +103,7 @@ class IndexedDBManager {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => { // 'reject' renomeado para '_reject'
         const transaction = this.db!.transaction([RECORDS_STORE], 'readonly');
         const store = transaction.objectStore(RECORDS_STORE);
         const request = store.getAll();
@@ -129,7 +129,7 @@ class IndexedDBManager {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => { // 'reject' renomeado para '_reject'
         const transaction = this.db!.transaction([RECORDS_STORE], 'readwrite');
         const store = transaction.objectStore(RECORDS_STORE);
         const request = store.delete(id);
@@ -157,7 +157,7 @@ class IndexedDBManager {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => { // 'reject' renomeado para '_reject'
         const transaction = this.db!.transaction([SETTINGS_STORE], 'readwrite');
         const store = transaction.objectStore(SETTINGS_STORE);
         const request = store.put({ key: 'app_settings', ...settings });
@@ -180,7 +180,7 @@ class IndexedDBManager {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => { // 'reject' renomeado para '_reject'
         const transaction = this.db!.transaction([SETTINGS_STORE], 'readonly');
         const store = transaction.objectStore(SETTINGS_STORE);
         const request = store.get('app_settings');

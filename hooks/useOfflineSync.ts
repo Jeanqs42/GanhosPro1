@@ -63,7 +63,7 @@ export const useOfflineSync = () => {
         // Carregar operações pendentes do localStorage
         const pendingOps = loadPendingOperations();
         
-        setState(prev => ({
+        setState((prev: OfflineSyncState) => ({
           ...prev,
           isInitialized: true,
           pendingOperations: pendingOps,
@@ -75,17 +75,17 @@ export const useOfflineSync = () => {
         }
       } catch (error) {
         console.error('Erro ao inicializar sincronização offline:', error);
-        setState(prev => ({ ...prev, isInitialized: true }));
+        setState((prev: OfflineSyncState) => ({ ...prev, isInitialized: true }));
       }
     })();
 
     return initPromiseRef.current;
-  }, []);
+  }, [loadPendingOperations, processPendingOperations]);
 
   // Detectar mudanças na conectividade
   useEffect(() => {
     const handleOnline = () => {
-      setState(prev => {
+      setState((prev: OfflineSyncState) => {
         const newState = { ...prev, isOnline: true };
         
         // Processar operações pendentes quando voltar online
@@ -98,7 +98,7 @@ export const useOfflineSync = () => {
     };
 
     const handleOffline = () => {
-      setState(prev => ({ ...prev, isOnline: false }));
+      setState((prev: OfflineSyncState) => ({ ...prev, isOnline: false }));
     };
 
     window.addEventListener('online', handleOnline);
@@ -108,7 +108,7 @@ export const useOfflineSync = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [state.pendingOperations]);
+  }, [processPendingOperations]); // Removido state.pendingOperations para evitar loop, processPendingOperations já tem a lógica
 
   // Inicializar quando o componente montar
   useEffect(() => {
@@ -146,7 +146,7 @@ export const useOfflineSync = () => {
       retryCount: 0,
     };
 
-    setState(prev => {
+    setState((prev: OfflineSyncState) => {
       const newPendingOps = dedupeOperations([...prev.pendingOperations, newOperation]);
       savePendingOperations(newPendingOps);
       return {
@@ -159,13 +159,13 @@ export const useOfflineSync = () => {
     if (state.isOnline) {
       processPendingOperations([newOperation]);
     }
-  }, [state.isOnline, savePendingOperations]);
+  }, [state.isOnline, savePendingOperations, processPendingOperations]);
 
   // Processar operações pendentes
   const processPendingOperations = useCallback(async (operations: OfflineOperation[]) => {
     if (state.syncInProgress || !state.isOnline) return;
 
-    setState(prev => ({ ...prev, syncInProgress: true }));
+    setState((prev: OfflineSyncState) => ({ ...prev, syncInProgress: true }));
 
     const ops = dedupeOperations(operations);
     const successfulOps: string[] = [];
@@ -204,8 +204,8 @@ export const useOfflineSync = () => {
     }
 
     // Atualizar estado removendo operações bem-sucedidas
-    setState(prev => {
-      const remainingOps = dedupeOperations(prev.pendingOperations.filter(op => 
+    setState((prev: OfflineSyncState) => {
+      const remainingOps = dedupeOperations(prev.pendingOperations.filter((op: OfflineOperation) => 
         !successfulOps.includes(op.id)
       ).concat(failedOps));
 
@@ -320,7 +320,7 @@ export const useOfflineSync = () => {
 
   // Limpar operações pendentes
   const clearPendingOperations = useCallback(() => {
-    setState(prev => ({ ...prev, pendingOperations: [] }));
+    setState((prev: OfflineSyncState) => ({ ...prev, pendingOperations: [] }));
     localStorage.removeItem('ganhospro_pending_ops');
   }, []);
 

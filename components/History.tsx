@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo } from 'react'; // Removido useEffect, useState
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { RunRecord, AppSettings } from '../types';
@@ -8,7 +8,7 @@ import { useOfflineSync } from '../hooks/useOfflineSync'; // Importar useOffline
 
 interface HistoryProps {
   records: RunRecord[];
-  deleteRecord: (id: string) => void; // Agora recebe a função do AppLayout
+  deleteRecord: (id: string) => Promise<boolean>; // Agora recebe a função do AppLayout
   settings: AppSettings;
 }
 
@@ -20,20 +20,12 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
     hasPendingOperations,
     syncInProgress,
     forcSync,
-    getAllRecords, // Usado para carregar os registros iniciais
-    deleteRecord: deleteRecordOfflineHook, // Renomeado para evitar conflito com prop
     pendingOperations,
     lastSyncTime,
   } = useOfflineSync();
 
-  // O estado offlineRecords agora é o 'records' que vem via props do AppLayout
-  // Não precisamos de um estado local separado para 'offlineRecords' aqui,
-  // pois 'records' já é a fonte de verdade atualizada pelo AppLayout.
-  // No entanto, para manter a compatibilidade com a lógica existente,
-  // vamos usar 'records' diretamente.
-  
   const sortedRecords = useMemo(() => {
-    return [...records].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return [...records].sort((a: RunRecord, b: RunRecord) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [records]);
 
   const handleViewDetails = (record: RunRecord) => {
@@ -41,7 +33,7 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
   };
 
   const handleDelete = (id: string, recordDate: string) => {
-    toast((t) => (
+    toast((t: any) => (
         <div className="flex flex-col items-center text-center p-2">
             <h3 className="font-bold text-lg mb-2 text-red-400">Confirmar Exclusão</h3>
             <p className="text-sm mb-4">
@@ -57,7 +49,8 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
                     Cancelar
                 </button>
                 <button
-                    onClick={async () => {
+                    onClick={async (e: React.MouseEvent<HTMLButtonElement>) => {
+                        e.stopPropagation(); // Evita que o clique propague para o item da lista
                         // Chama a função deleteRecord passada via props do AppLayout
                         const success = await deleteRecord(id); 
                         if (!success) {
@@ -91,10 +84,10 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
     }
   };
 
-  const totalEarnings = useMemo(() => records.reduce((sum, r) => sum + r.totalEarnings, 0), [records]);
-  const totalKm = useMemo(() => records.reduce((sum, r) => sum + r.kmDriven, 0), [records]);
+  const totalEarnings = useMemo(() => records.reduce((sum: number, r: RunRecord) => sum + r.totalEarnings, 0), [records]);
+  const totalKm = useMemo(() => records.reduce((sum: number, r: RunRecord) => sum + r.kmDriven, 0), [records]);
   const totalNetProfit = useMemo(() => {
-    return records.reduce((sum, r) => {
+    return records.reduce((sum: number, r: RunRecord) => {
       const carCost = r.kmDriven * settings.costPerKm;
       const additionalCosts = r.additionalCosts || 0;
       const netProfit = r.totalEarnings - additionalCosts - carCost;
@@ -183,7 +176,7 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
       </div>
       
       <div className="space-y-4">
-        {sortedRecords.map((record) => {
+        {sortedRecords.map((record: RunRecord) => {
           const carCost = record.kmDriven * settings.costPerKm;
           const netProfit = record.totalEarnings - (record.additionalCosts || 0) - carCost;
           
@@ -208,7 +201,7 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
                         <p className={`font-bold text-lg ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{netProfit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                     </div>
                     <button 
-                        onClick={(e) => { e.stopPropagation(); handleDelete(record.id, record.date); }} 
+                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleDelete(record.id, record.date); }} 
                         className="p-2 bg-red-600 hover:bg-red-700 rounded-full text-white transition-transform transform hover:scale-110" 
                         aria-label="Deletar"
                     >

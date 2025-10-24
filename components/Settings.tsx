@@ -33,20 +33,27 @@ const InputField: React.FC<{ icon?: React.ReactNode; label: string; helper?: str
 
 const Settings: React.FC<SettingsProps> = ({ settings, setSettings, isPremium }) => {
   const navigate = useNavigate();
-  const [costPerKm, setCostPerKm] = useState(settings.costPerKm.toString());
+  const [costPerKm, setCostPerKm] = useState<string>(settings.costPerKm.toString());
   const [activeTab, setActiveTab] = useLocalStorage<'combustion' | 'hybrid' | 'electric'>('settings_active_tab', 'combustion'); // Persistir aba ativa
 
   // Fuel calculator states
-  const [refuelCost, setRefuelCost] = useLocalStorage('settings_refuel_cost', '');
-  const [kmOnRefuel, setKmOnRefuel] = useLocalStorage('settings_km_on_refuel', '');
-  const [chargeCost, setChargeCost] = useLocalStorage('settings_charge_cost', '');
-  const [autonomy, setAutonomy] = useLocalStorage('settings_autonomy', '');
-  const [totalGasolineCost, setTotalGasolineCost] = useLocalStorage('settings_total_gasoline_cost', '');
-  const [totalElectricCost, setTotalElectricCost] = useLocalStorage('settings_total_electric_cost', '');
-  const [totalKmDriven, setTotalKmDriven] = useLocalStorage('settings_total_km_driven', '');
+  const [refuelCost, setRefuelCost] = useLocalStorage<string>('settings_refuel_cost', '');
+  const [kmOnRefuel, setKmOnRefuel] = useLocalStorage<string>('settings_km_on_refuel', '');
+  const [chargeCost, setChargeCost] = useLocalStorage<string>('settings_charge_cost', '');
+  const [autonomy, setAutonomy] = useLocalStorage<string>('settings_autonomy', '');
+  const [totalGasolineCost, setTotalGasolineCost] = useLocalStorage<string>('settings_total_gasoline_cost', '');
+  const [totalElectricCost, setTotalElectricCost] = useLocalStorage<string>('settings_total_electric_cost', '');
+  const [totalKmDriven, setTotalKmDriven] = useLocalStorage<string>('settings_total_km_driven', '');
   
   // Advanced calculator states
-  const [advancedCosts, setAdvancedCosts] = useLocalStorage('settings_advanced_costs', {
+  const [advancedCosts, setAdvancedCosts] = useLocalStorage<{
+    vehicle: string;
+    maintenance: string;
+    insurance: string;
+    taxes: string;
+    others: string;
+    monthlyKm: string;
+  }>('settings_advanced_costs', {
     vehicle: '',
     maintenance: '',
     insurance: '',
@@ -136,7 +143,7 @@ const Settings: React.FC<SettingsProps> = ({ settings, setSettings, isPremium })
           id="costPerKm"
           type="number"
           value={costPerKm}
-          onChange={(e) => setCostPerKm(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCostPerKm(e.target.value)}
           placeholder="Ex: 0.75"
           className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-primary focus:outline-none transition"
           step="0.01"
@@ -180,23 +187,23 @@ const Settings: React.FC<SettingsProps> = ({ settings, setSettings, isPremium })
                         <div className="bg-gray-700/50 p-3 rounded-lg text-xs text-center text-gray-300 mb-4">
                         Use os dados do seu último abastecimento para um cálculo preciso.
                         </div>
-                        <InputField label="Valor do Abastecimento (R$)" id="refuelCost" value={refuelCost} onChange={e => setRefuelCost(e.target.value)} placeholder="Ex: 250.00" />
-                        <InputField label="KM Rodados" id="kmOnRefuel" value={kmOnRefuel} onChange={e => setKmOnRefuel(e.target.value)} placeholder="Ex: 450" />
+                        <InputField label="Valor do Abastecimento (R$)" id="refuelCost" value={refuelCost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRefuelCost(e.target.value)} placeholder="Ex: 250.00" />
+                        <InputField label="KM Rodados" id="kmOnRefuel" value={kmOnRefuel} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setKmOnRefuel(e.target.value)} placeholder="Ex: 450" />
                     </>
                 )}
                 
                 {activeTab === 'electric' && (
                     <>
-                        <InputField label="Custo da Recarga Completa (R$)" id="chargeCost" value={chargeCost} onChange={e => setChargeCost(e.target.value)} placeholder="Ex: 40.00" />
-                        <InputField label="Autonomia com Carga Completa (KM)" id="autonomy" value={autonomy} onChange={e => setAutonomy(e.target.value)} placeholder="Ex: 350" />
+                        <InputField label="Custo da Recarga Completa (R$)" id="chargeCost" value={chargeCost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setChargeCost(e.target.value)} placeholder="Ex: 40.00" />
+                        <InputField label="Autonomia com Carga Completa (KM)" id="autonomy" value={autonomy} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAutonomy(e.target.value)} placeholder="Ex: 350" />
                     </>
                 )}
 
                 {activeTab === 'hybrid' && (
                     <>
-                        <InputField label="Gasto Total com Combustível (R$)" id="totalGasolineCost" value={totalGasolineCost} onChange={e => setTotalGasolineCost(e.target.value)} placeholder="Ex: 350.00" />
-                        <InputField label="Gasto Total com Eletricidade (R$)" id="totalElectricCost" value={totalElectricCost} onChange={e => setTotalElectricCost(e.target.value)} placeholder="Ex: 80.00" />
-                        <InputField label="Total de KM Rodados" id="totalKmDriven" value={totalKmDriven} onChange={e => setTotalKmDriven(e.target.value)} placeholder="Ex: 1200" />
+                        <InputField label="Gasto Total com Combustível (R$)" id="totalGasolineCost" value={totalGasolineCost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTotalGasolineCost(e.target.value)} placeholder="Ex: 350.00" />
+                        <InputField label="Gasto Total com Eletricidade (R$)" id="totalElectricCost" value={totalElectricCost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTotalElectricCost(e.target.value)} placeholder="Ex: 80.00" />
+                        <InputField label="Total de KM Rodados" id="totalKmDriven" value={totalKmDriven} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTotalKmDriven(e.target.value)} placeholder="Ex: 1200" />
                     </>
                 )}
             </div>
