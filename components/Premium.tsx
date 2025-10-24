@@ -306,7 +306,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
           </div>
           <p className="text-gray-400 text-sm">Compare seus ganhos, custos e lucros em gráficos semanais, mensais ou anuais.</p>
         </button>
-        <button type="button" onClick={() => navigate('/settings')} aria-label="Ir para Ajustes" className="w-full text-left bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700/50 cursor-pointer transition-colors border border-transparent hover:border-brand-primary">
+        <button type="button" onClick={() => navigate('/app/settings')} aria-label="Ir para Ajustes" className="w-full text-left bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700/50 cursor-pointer transition-colors border border-transparent hover:border-brand-primary">
           <div className="flex items-center mb-2">
             <Calculator size={24} className="text-brand-accent mr-3" />
             <h2 className="text-xl font-semibold">Custo por KM Preciso</h2>
