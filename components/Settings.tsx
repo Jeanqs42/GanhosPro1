@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Save, Info, Calculator, Droplet, Zap, Blend, PlusCircle, Car, Wrench, Shield, FileText, Route, Crown } from 'lucide-react';
+import { Save, Info, Calculator, Droplet, Zap, Blend, PlusCircle, Car, Wrench, Shield, FileText, Route, Crown, Loader2 } from 'lucide-react';
 import { AppSettings } from '../types';
 import { useLocalStorage } from '../hooks/useLocalStorage'; // Importar useLocalStorage
 
@@ -27,6 +27,7 @@ const InputField: React.FC<{ icon?: React.ReactNode; label: string; helper?: str
             className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-primary focus:outline-none transition"
             step="0.01"
             min="0"
+            aria-label={label}
         />
     </div>
 );
@@ -62,22 +63,29 @@ const Settings: React.FC<SettingsProps> = ({ settings, setSettings, isPremium })
     monthlyKm: ''
   });
 
+  const [isSavingSettings, setIsSavingSettings] = useState<boolean>(false);
+  const [isCalculatingCost, setIsCalculatingCost] = useState<boolean>(false);
+
   const handleAdvancedCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setAdvancedCosts(prev => ({ ...prev, [id]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setIsSavingSettings(true);
     const cost = parseFloat(costPerKm);
     if (isNaN(cost) || cost < 0) {
       toast.error('Por favor, insira um valor válido para o custo por KM.');
+      setIsSavingSettings(false);
       return;
     }
     setSettings({ costPerKm: cost });
     toast.success('Configurações salvas!');
+    setIsSavingSettings(false);
   };
 
-  const calculateAndSetCost = () => {
+  const calculateAndSetCost = async () => {
+    setIsCalculatingCost(true);
     let fuelCostPerKm = 0;
     const refuelCostVal = parseFloat(refuelCost);
     const kmOnRefuelVal = parseFloat(kmOnRefuel);
@@ -103,6 +111,7 @@ const Settings: React.FC<SettingsProps> = ({ settings, setSettings, isPremium })
 
         if (anyAdvancedCostFilled && monthlyKm <= 0) {
             toast.error('A "Média de KMs Rodados" é obrigatória ao adicionar outros custos.');
+            setIsCalculatingCost(false);
             return;
         }
 
@@ -122,12 +131,14 @@ const Settings: React.FC<SettingsProps> = ({ settings, setSettings, isPremium })
 
     if (totalCost <= 0 && fuelCostPerKm <= 0 && advancedCostPerKm <= 0) {
         toast.error('Preencha os campos de pelo menos uma das seções da calculadora para obter um resultado.');
+        setIsCalculatingCost(false);
         return;
     }
     
     const finalCost = totalCost.toFixed(2);
     setCostPerKm(finalCost);
     toast.success(`Custo por KM atualizado para R$ ${finalCost}. Clique em Salvar para confirmar.`);
+    setIsCalculatingCost(false);
   };
 
 
@@ -148,10 +159,11 @@ const Settings: React.FC<SettingsProps> = ({ settings, setSettings, isPremium })
           className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-primary focus:outline-none transition"
           step="0.01"
           min="0"
+          aria-label="Custo por KM"
         />
-        <button onClick={handleSave} className="w-full mt-4 bg-brand-primary hover:bg-brand-secondary text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-transform transform hover:scale-105">
-          <Save size={20} className="mr-2" />
-          Salvar
+        <button onClick={handleSave} disabled={isSavingSettings} className="w-full mt-4 bg-brand-primary hover:bg-brand-secondary text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-transform transform hover:scale-105" aria-label="Salvar Custo por KM">
+          {isSavingSettings ? <Loader2 className="animate-spin mr-2" size={20} /> : <Save size={20} className="mr-2" />}
+          {isSavingSettings ? 'Salvando...' : 'Salvar'}
         </button>
       </div>
 
@@ -164,18 +176,21 @@ const Settings: React.FC<SettingsProps> = ({ settings, setSettings, isPremium })
                 <button 
                     onClick={() => setActiveTab('combustion')} 
                     className={`flex-1 py-2 text-sm font-medium flex items-center justify-center transition-colors ${activeTab === 'combustion' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-400 hover:text-white'}`}
+                    aria-label="Selecionar calculadora de combustão"
                 >
                     <Droplet size={16} className="mr-2" /> Combustão
                 </button>
                 <button 
                     onClick={() => setActiveTab('hybrid')}
                     className={`flex-1 py-2 text-sm font-medium flex items-center justify-center transition-colors ${activeTab === 'hybrid' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-400 hover:text-white'}`}
+                    aria-label="Selecionar calculadora de híbrido"
                 >
                     <Blend size={16} className="mr-2" /> Híbrido
                 </button>
                 <button 
                     onClick={() => setActiveTab('electric')}
                     className={`flex-1 py-2 text-sm font-medium flex items-center justify-center transition-colors ${activeTab === 'electric' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-400 hover:text-white'}`}
+                    aria-label="Selecionar calculadora de elétrico"
                 >
                     <Zap size={16} className="mr-2" /> Elétrico
                 </button>
@@ -231,15 +246,16 @@ const Settings: React.FC<SettingsProps> = ({ settings, setSettings, isPremium })
                     <p className="text-sm text-gray-300 mt-2 mb-3">
                     Tenha um cálculo completo adicionando custos de manutenção, seguro e mais para um R$/KM ultra preciso.
                     </p>
-                    <button onClick={() => navigate('/premium')} className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg text-sm transition-colors">
+                    <button onClick={() => navigate('/premium')} className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg text-sm transition-colors" aria-label="Desbloquear com Premium">
                         Desbloquear com Premium
                     </button>
                 </div>
             )}
 
 
-            <button onClick={calculateAndSetCost} className="w-full mt-6 bg-brand-accent hover:opacity-90 text-gray-900 font-bold py-3 px-4 rounded-lg flex items-center justify-center transition">
-                {isPremium ? 'Calcular Custo Total e Usar' : 'Calcular Custo e Usar'}
+            <button onClick={calculateAndSetCost} disabled={isCalculatingCost} className="w-full mt-6 bg-brand-accent hover:opacity-90 text-gray-900 font-bold py-3 px-4 rounded-lg flex items-center justify-center transition" aria-label={isPremium ? 'Calcular Custo Total e Usar' : 'Calcular Custo e Usar'}>
+                {isCalculatingCost ? <Loader2 className="animate-spin mr-2" size={20} /> : null}
+                {isCalculatingCost ? 'Calculando...' : (isPremium ? 'Calcular Custo Total e Usar' : 'Calcular Custo e Usar')}
             </button>
       </div>
 

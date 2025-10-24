@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { DollarSign, Route, Clock, Wrench, Calculator, Save, Info, Edit, ArrowLeft } from 'lucide-react'; // Removido Wifi, WifiOff, Clock3
+import { DollarSign, Route, Clock, Wrench, Calculator, Save, Info, Edit, ArrowLeft, Loader2 } from 'lucide-react';
 import { RunRecord, AppSettings, CalculationResult } from '../types';
 import { safeRandomUUID } from '../utils/uuid';
 import { useOfflineSync } from '../hooks/useOfflineSync';
@@ -40,6 +40,7 @@ const InputField = React.memo<{
             className={`w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-primary focus:outline-none transition ${isHighlighted ? 'py-4 text-xl border-brand-primary' : ''}`}
             step="0.01"
             min="0"
+            aria-label={label}
         />
     </div>
 ));
@@ -77,13 +78,18 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
     const [kmDriven, setKmDriven] = useState<string>(recordFromState?.kmDriven?.toString() || '');
     const [hoursWorked, setHoursWorked] = useState<string>(recordFromState?.hoursWorked?.toString() || '');
     const [additionalCosts, setAdditionalCosts] = useState<string>(recordFromState?.additionalCosts?.toString() || '');
+
+    const [isCalculating, setIsCalculating] = useState<boolean>(false);
+    const [isSaving, setIsSaving] = useState<boolean>(false);
     
-    const handleCalculateClick = () => {
+    const handleCalculateClick = async () => {
+        setIsCalculating(true);
         const earnings = parseFloat(totalEarnings);
         const km = parseFloat(kmDriven);
 
         if (isNaN(earnings) || isNaN(km) || earnings <= 0 || km <= 0) {
             toast.error('Ganhos do Dia e KM Rodado são obrigatórios e devem ser maiores que zero.');
+            setIsCalculating(false);
             return;
         }
 
@@ -99,8 +105,9 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                     </p>
                     <div className="flex w-full space-x-2">
                          <button
-                            onClick={() => toast.dismiss(t.id)}
+                            onClick={() => { toast.dismiss(t.id); setIsCalculating(false); }}
                             className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
+                            aria-label="Cancelar sobrescrita"
                         >
                             Cancelar
                         </button>
@@ -109,8 +116,10 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                                 toast.dismiss(t.id);
                                 setHasCalculated(true);
                                 setIsDetailsView(false); // Garante que não está no modo de detalhes para um novo cálculo
+                                setIsCalculating(false);
                             }}
                             className="flex-1 bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
+                            aria-label="Confirmar sobrescrita e continuar"
                         >
                             Continuar
                         </button>
@@ -122,6 +131,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
         } else {
             setHasCalculated(true);
             setIsDetailsView(false); // Garante que não está no modo de detalhes para um novo cálculo
+            setIsCalculating(false);
         }
     };
     
@@ -147,15 +157,18 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
             setIsDetailsView(false); // Garante que estamos no modo de entrada
             setHasCalculated(false); // Garante que estamos no modo de entrada
         }
-    }, [recordFromState]); // Removido settings da array de dependências, pois não é diretamente usado para resetar o estado do formulário com base na presença de recordFromState.
+    }, [recordFromState]);
 
     const handleSave = async () => {
+        setIsSaving(true);
         if (!hasCalculated) {
             toast.error('Clique em "Calcular" antes de salvar.');
+            setIsSaving(false);
             return;
         }
         if (!result) {
             toast.error('Calcule os resultados antes de salvar.');
+            setIsSaving(false);
             return;
         }
 
@@ -175,6 +188,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                                 toast.dismiss(t.id);
                             }}
                             className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
+                            aria-label="Ver Histórico"
                         >
                             Ver Histórico
                         </button>
@@ -184,6 +198,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                                 toast.dismiss(t.id);
                             }}
                             className="flex-1 bg-brand-accent hover:opacity-90 text-gray-900 font-bold py-2 px-4 rounded-lg text-sm transition-colors"
+                            aria-label="Ir para Premium"
                         >
                             Ir para Premium
                         </button>
@@ -192,6 +207,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
             ), {
                 duration: Infinity,
             });
+            setIsSaving(false);
             return;
         }
 
@@ -209,6 +225,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
         
         if (!saveSuccess) {
             toast.error('Erro ao salvar registro. Tente novamente.');
+            setIsSaving(false);
             return;
         }
 
@@ -227,6 +244,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
         }
 
         toast.success(successMessage);
+        setIsSaving(false);
         navigate('/history');
     };
 
@@ -328,22 +346,22 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
             </div>
              {isDetails ? (
                 <>
-                    <button onClick={() => { setIsDetailsView(false); setHasCalculated(false); }} className="w-full mt-6 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-transform transform hover:scale-105">
+                    <button onClick={() => { setIsDetailsView(false); setHasCalculated(false); }} className="w-full mt-6 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-transform transform hover:scale-105" aria-label="Editar Registro">
                         <Edit size={20} className="mr-2"/>
                         Editar Registro
                     </button>
-                    <button onClick={() => navigate('/history')} className="w-full mt-4 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition">
+                    <button onClick={() => navigate('/history')} className="w-full mt-4 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition" aria-label="Voltar ao Histórico">
                         <ArrowLeft size={20} className="mr-2" />
                         Voltar ao Histórico
                     </button>
                 </>
              ) : (
                 <>
-                    <button onClick={handleSave} className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-transform transform hover:scale-105">
-                        <Save size={20} className="mr-2"/>
-                        {recordFromState ? 'Atualizar Registro' : 'Salvar Registro'}
+                    <button onClick={handleSave} disabled={isSaving} className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-transform transform hover:scale-105" aria-label={recordFromState ? 'Atualizar Registro' : 'Salvar Registro'}>
+                        {isSaving ? <Loader2 className="animate-spin mr-2" size={20} /> : <Save size={20} className="mr-2"/>}
+                        {recordFromState ? (isSaving ? 'Atualizando...' : 'Atualizar Registro') : (isSaving ? 'Salvando...' : 'Salvar Registro')}
                     </button>
-                    <button onClick={handleReset} className="w-full mt-4 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition">
+                    <button onClick={handleReset} className="w-full mt-4 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition" aria-label="Fazer Novo Cálculo">
                         <Calculator size={20} className="mr-2" />
                         Fazer Novo Cálculo
                     </button>
@@ -364,7 +382,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                     <Info size={18} className="mr-3 mt-1 flex-shrink-0" />
                     <div>
                         <strong className="font-bold">Atenção!</strong>
-                        <span className="block sm:inline ml-1">Seu custo por KM está definido como 0. Vá para a tela de <button onClick={() => navigate('/settings')} className="font-bold underline">Ajustes</button> para configurar e obter cálculos precisos.</span>
+                        <span className="block sm:inline ml-1">Seu custo por KM está definido como 0. Vá para a tela de <button onClick={() => navigate('/settings')} className="font-bold underline" aria-label="Ir para Ajustes">Ajustes</button> para configurar e obter cálculos precisos.</span>
                     </div>
                 </div>
             )}
@@ -382,11 +400,11 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                         <label htmlFor="date" className="flex items-center text-sm font-medium text-gray-300 mb-2">
                             <span className="ml-2">Data</span>
                         </label>
-                        <input type="date" id="date" value={date} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDate(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-primary focus:outline-none transition" />
+                        <input type="date" id="date" value={date} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDate(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-primary focus:outline-none transition" aria-label="Data do Registro" />
                     </div>
-                    <button onClick={handleCalculateClick} className="w-full bg-brand-primary hover:bg-brand-secondary text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-transform transform hover:scale-105">
-                        <Calculator size={20} className="mr-2"/>
-                        Calcular
+                    <button onClick={handleCalculateClick} disabled={isCalculating} className="w-full bg-brand-primary hover:bg-brand-secondary text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-transform transform hover:scale-105" aria-label="Calcular Ganhos do Dia">
+                        {isCalculating ? <Loader2 className="animate-spin mr-2" size={20} /> : <Calculator size={20} className="mr-2"/>}
+                        {isCalculating ? 'Calculando...' : 'Calcular'}
                     </button>
                 </div>
             )}

@@ -266,7 +266,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
   const renderHeader = (title: string, icon?: React.ReactNode) => (
     <div className="flex items-center mb-4">
       {activeTool !== 'menu' && (
-        <button onClick={() => setActiveTool('menu')} className="p-2 rounded-full hover:bg-gray-700 mr-2">
+        <button onClick={() => setActiveTool('menu')} className="p-2 rounded-full hover:bg-gray-700 mr-2" aria-label="Voltar ao menu Premium">
           <ArrowLeft size={20} />
         </button>
       )}
@@ -386,6 +386,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
               placeholder="Pergunte algo sobre o relatório..."
               className="flex-grow bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-primary focus:outline-none transition"
               disabled={isChatLoading}
+              aria-label="Campo de entrada para chat com a IA"
             />
             <button type="submit" className="bg-brand-secondary hover:bg-emerald-700 text-white p-2.5 rounded-lg disabled:opacity-50" aria-label="Enviar pergunta" disabled={isChatLoading || !chatInput.trim()}>
               <MessageSquare size={20} />
@@ -403,16 +404,16 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label htmlFor="startDate" className="block text-sm font-medium text-gray-300 mb-1">Início</label>
-                    <input type="date" id="startDate" value={reportConfig.startDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReportConfig(p => ({...p, startDate: e.target.value}))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none"/>
+                    <input type="date" id="startDate" value={reportConfig.startDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReportConfig(p => ({...p, startDate: e.target.value}))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none" aria-label="Data de início do relatório"/>
                 </div>
                 <div>
                     <label htmlFor="endDate" className="block text-sm font-medium text-gray-300 mb-1">Fim</label>
-                    <input type="date" id="endDate" value={reportConfig.endDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReportConfig(p => ({...p, endDate: e.target.value}))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none"/>
+                    <input type="date" id="endDate" value={reportConfig.endDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReportConfig(p => ({...p, endDate: e.target.value}))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none" aria-label="Data de fim do relatório"/>
                 </div>
             </div>
             <div>
                  <label htmlFor="metric" className="block text-sm font-medium text-gray-300 mb-1">Métrica</label>
-                 <select id="metric" value={reportConfig.metric} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setReportConfig(p => ({...p, metric: e.target.value}))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none">
+                 <select id="metric" value={reportConfig.metric} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setReportConfig(p => ({...p, metric: e.target.value}))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none" aria-label="Métrica do relatório">
                     <option value="netProfit">Lucro Líquido por Dia</option>
                     <option value="profitPerKm">Lucro por KM</option>
                     <option value="grossEarnings">Ganhos Brutos por Dia</option>
@@ -706,6 +707,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
             <button
                 onClick={handleUpgrade}
                 className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-4 px-8 rounded-lg flex items-center justify-center transition-transform transform hover:scale-105 w-full text-lg"
+                aria-label="Fazer Upgrade Agora para Premium"
             >
                 <Unlock className="mr-2" /> Fazer Upgrade Agora
             </button>
