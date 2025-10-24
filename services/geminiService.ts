@@ -49,8 +49,7 @@ export const analyzeRecords = async (records: RunRecord[], settings: AppSettings
 export const getChatFollowUp = async (
   records: RunRecord[],
   settings: AppSettings,
-  chatHistory: { role: 'user' | 'model'; parts: { text: string }[] }[],
-  userQuestion: string
+  fullChatHistory: { role: 'user' | 'model'; parts: { text: string }[] }[] // Agora inclui a última mensagem do usuário
 ): Promise<string> => {
     if (!apiKey || !ai) {
         throw new Error("Chave de API do Gemini não configurada. Defina GEMINI_API_KEY em .env.local.");
@@ -68,10 +67,14 @@ export const getChatFollowUp = async (
         parts: [{ text: `Aqui estão todos os registros de corrida do usuário e suas configurações. Use-os para responder às perguntas de forma detalhada, se necessário. Custo por KM: R$${settings.costPerKm.toFixed(2)}\n\nRegistros:\n${recordsSummary}` }]
     };
 
-    // O histórico para o chat deve incluir a mensagem de contexto e todas as mensagens anteriores
+    // A última mensagem do usuário já está incluída em fullChatHistory.
+    // Precisamos separar a última mensagem para sendMessage e o restante para o histórico de startChat.
+    const latestUserMessage = fullChatHistory[fullChatHistory.length - 1];
+    const conversationHistoryForGemini = fullChatHistory.slice(0, -1); // Todas as mensagens ANTES da última do usuário
+
     const historyForChat = [
         contextMessage,
-        ...chatHistory, // Removido .slice(0, -1) para incluir todo o histórico anterior
+        ...conversationHistoryForGemini,
     ];
 
     try {
@@ -80,7 +83,8 @@ export const getChatFollowUp = async (
             history: historyForChat,
             systemInstruction: "Você é um especialista em finanças para motoristas de aplicativo. Responda às perguntas do usuário de forma curta e direta, usando os dados fornecidos e o histórico da conversa. Se a pergunta exigir detalhes específicos dos registros, consulte-os."
         });
-        const result = await chat.sendMessage(userQuestion);
+        // Envia APENAS a última mensagem do usuário
+        const result = await chat.sendMessage(latestUserMessage.parts[0].text);
         const response = await result.response;
         return response.text();
     } catch (error) {

@@ -161,13 +161,15 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     const newUserMessage = { role: 'user' as const, parts: [{ text: question }] };
     
     // Adiciona a mensagem do usuário ao histórico para exibição imediata
-    setChatHistory(prev => [...prev, newUserMessage]);
+    // Cria uma nova array para passar para a função, incluindo a nova mensagem
+    const newHistory = [...chatHistory, newUserMessage];
+    setChatHistory(newHistory); // Atualiza o estado com a nova mensagem
     setChatInput('');
     setIsChatLoading(true);
 
     try {
-      // Passa o histórico *anterior* (sem a mensagem atual do usuário) e a pergunta atual separadamente
-      const response = await getChatFollowUp(records, settings, chatHistory, question);
+      // Passa o histórico COMPLETO (incluindo a última mensagem do usuário)
+      const response = await getChatFollowUp(records, settings, newHistory); // Removido 'question'
       setChatHistory(prev => [...prev, { role: 'model' as const, parts: [{ text: response }] }]);
     } catch (error) {
       console.error('Chat error:', error);
