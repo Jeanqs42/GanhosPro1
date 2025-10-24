@@ -64,6 +64,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
         syncInProgress,
         forcSync,
         lastSyncTime,
+        pendingOperations, // Adicionado: desestruturando pendingOperations
     } = useOfflineSync();
 
     // Inicializa isDetailsView e hasCalculated com base em recordFromState
@@ -107,6 +108,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                             onClick={() => {
                                 toast.dismiss(t.id);
                                 setHasCalculated(true);
+                                setIsDetailsView(false); // Garante que não está no modo de detalhes para um novo cálculo
                             }}
                             className="flex-1 bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
                         >
@@ -119,6 +121,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
             });
         } else {
             setHasCalculated(true);
+            setIsDetailsView(false); // Garante que não está no modo de detalhes para um novo cálculo
         }
     };
     
@@ -131,8 +134,8 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
             setKmDriven(recordFromState.kmDriven?.toString() || '');
             setHoursWorked(recordFromState.hoursWorked?.toString() || '');
             setAdditionalCosts(recordFromState.additionalCosts?.toString() || '');
-            // NÃO defina isDetailsView ou hasCalculated aqui. Eles são inicializados acima
-            // e depois controlados por ações do usuário (botões).
+            setIsDetailsView(true); // Define como true para mostrar a visualização de detalhes imediatamente
+            setHasCalculated(true); // Define como true para mostrar os resultados imediatamente
         } else {
             // Se nenhum registro é passado, garanta que o formulário esteja limpo para um novo cálculo.
             setId(safeRandomUUID()); // Gera um novo ID para um novo registro
@@ -144,8 +147,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
             setIsDetailsView(false); // Garante que estamos no modo de entrada
             setHasCalculated(false); // Garante que estamos no modo de entrada
         }
-    }, [recordFromState, settings]);
-
+    }, [recordFromState]); // Removido settings da array de dependências, pois não é diretamente usado para resetar o estado do formulário com base na presença de recordFromState.
 
     const handleSave = async () => {
         if (!hasCalculated) {
@@ -364,7 +366,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                 {syncInProgress ? (
                     <span className="ml-3">Sincronizando…</span>
                 ) : hasPendingOperations ? (
-                    <button onClick={forcSync} className="ml-3 underline">Sincronizar</button>
+                    <span className="ml-3 flex items-center"><Clock3 size={14} className="mr-1"/> {pendingOperations.length} operações aguardando sincronização <button onClick={forcSync} className="ml-1 underline">Sincronizar</button></span>
                 ) : lastSyncTime ? (
                     <span className="ml-3 flex items-center"><Clock3 size={14} className="mr-1"/> Última sync: {new Date(lastSyncTime).toLocaleTimeString('pt-BR')}</span>
                 ) : null}
