@@ -158,17 +158,22 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     e.preventDefault();
     if (!chatInput.trim() || isChatLoading) return;
     const question = chatInput;
-    const newHistory = [...chatHistory, { role: 'user' as const, parts: [{ text: question }] }];
-    setChatHistory(newHistory);
+    const newUserMessage = { role: 'user' as const, parts: [{ text: question }] };
+    
+    // Adiciona a mensagem do usuário ao histórico para exibição imediata
+    setChatHistory(prev => [...prev, newUserMessage]);
     setChatInput('');
     setIsChatLoading(true);
+
     try {
-      // Pass records and settings here
-      const response = await getChatFollowUp(records, settings, newHistory, question);
+      // Passa o histórico *anterior* (sem a mensagem atual do usuário) e a pergunta atual separadamente
+      const response = await getChatFollowUp(records, settings, chatHistory, question);
       setChatHistory(prev => [...prev, { role: 'model' as const, parts: [{ text: response }] }]);
     } catch (error) {
       console.error('Chat error:', error);
       toast.error('Erro ao obter resposta. Tente novamente.');
+      // Em caso de erro, remove a mensagem do usuário do histórico para permitir nova tentativa
+      setChatHistory(prev => prev.slice(0, -1));
     } finally {
       setIsChatLoading(false);
     }
