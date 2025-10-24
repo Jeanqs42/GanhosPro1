@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'; // Removido useEffect, useState
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { RunRecord, AppSettings } from '../types';
@@ -29,7 +29,8 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
   }, [records]);
 
   const handleViewDetails = (record: RunRecord) => {
-    navigate('/', { state: { record: record } });
+    // CORREÇÃO: Navegar diretamente para /app para garantir que o location.state seja preservado
+    navigate('/app', { state: { record: record } });
   };
 
   const handleDelete = (id: string, recordDate: string) => {
