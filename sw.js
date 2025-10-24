@@ -5,7 +5,7 @@ const CACHE_NAME = 'ganhospro-cache-v12';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/style.css', // Corrigido de /landing.css para /style.css
+  // '/style.css', // Removido: style.css não é mais usado
   '/manifest.json'
 ];
 

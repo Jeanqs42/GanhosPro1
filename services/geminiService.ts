@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai"; // Corrigido para o nome do pacote correto
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { RunRecord, AppSettings } from '../types';
 
 // Validação e leitura da API Key (Vite)
@@ -6,7 +6,7 @@ const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as 
 console.log("GEMINI_API_KEY lida em geminiService:", apiKey ? "[definida]" : "[NÃO DEFINIDA]");
 
 // Instancia GoogleGenerativeAI diretamente
-const ai = apiKey ? new GoogleGenerativeAI({ apiKey }) : null;
+const ai = apiKey ? new GoogleGenerativeAI(apiKey) : null; // CORREÇÃO 1: Passa apiKey diretamente
 
 export const analyzeRecords = async (records: RunRecord[], settings: AppSettings): Promise<string> => {
     if (!apiKey || !ai) {
@@ -36,14 +36,10 @@ export const analyzeRecords = async (records: RunRecord[], settings: AppSettings
     `;
 
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                systemInstruction: "Você é um especialista em finanças para motoristas de aplicativo. Seja direto, use a moeda Real (R$) e a métrica de quilômetros (KM)."
-            }
-        });
-        return response.text;
+        const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash', systemInstruction: "Você é um especialista em finanças para motoristas de aplicativo. Seja direto, use a moeda Real (R$) e a métrica de quilômetros (KM)." }); // CORREÇÃO 2 & 3: Obtém o modelo e passa systemInstruction aqui
+        const result = await model.generateContent(prompt);
+        const response = await result.response; // CORREÇÃO 5: Acessa a resposta
+        return response.text(); // CORREÇÃO 5: Chama .text() na resposta
     } catch (error) {
         console.error("Gemini API error in analyzeRecords:", error);
         throw new Error("Falha ao comunicar com o serviço de IA. Verifique sua chave de API e tente novamente.");
@@ -81,12 +77,11 @@ export const getChatFollowUp = async (
         const model = ai!.getGenerativeModel({ model: 'gemini-2.5-flash' });
         const chat = model.startChat({
             history: historyForChat,
-            generationConfig: {
-                systemInstruction: "Você é um especialista em finanças para motoristas de aplicativo. Responda às perguntas do usuário de forma curta e direta, usando os dados fornecidos e o histórico da conversa. Se a pergunta exigir detalhes específicos dos registros, consulte-os."
-            }
+            systemInstruction: "Você é um especialista em finanças para motoristas de aplicativo. Responda às perguntas do usuário de forma curta e direta, usando os dados fornecidos e o histórico da conversa. Se a pergunta exigir detalhes específicos dos registros, consulte-os." // CORREÇÃO 3: systemInstruction fora de generationConfig
         });
-        const response = await chat.sendMessage({ message: userQuestion });
-        return response.text;
+        const result = await chat.sendMessage(userQuestion); // CORREÇÃO 4: Passa userQuestion diretamente
+        const response = await result.response; // CORREÇÃO 5: Acessa a resposta
+        return response.text(); // CORREÇÃO 5: Chama .text() na resposta
     } catch (error) {
         console.error("Gemini API error in getChatFollowUp:", error);
         throw new Error("Falha ao comunicar com o serviço de IA para o chat.");
@@ -118,14 +113,10 @@ export const getIntelligentReportAnalysis = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        systemInstruction: "Seja um especialista financeiro que fornece insights rápidos e diretos. Use a moeda Real (R$) e a métrica de quilômetros (KM)."
-      }
-    });
-    return response.text;
+    const model = ai.getGenerativeModel({ model: 'gemini-2.5-flash', systemInstruction: "Seja um especialista financeiro que fornece insights rápidos e diretos. Use a moeda Real (R$) e a métrica de quilômetros (KM)." }); // CORREÇÃO 6: Obtém o modelo e passa systemInstruction aqui
+    const result = await model.generateContent(prompt);
+    const response = await result.response; // CORREÇÃO 5: Acessa a resposta
+    return response.text(); // CORREÇÃO 5: Chama .text() na resposta
   } catch (error) {
     console.error("Gemini API error in getIntelligentReportAnalysis:", error);
     throw new Error("Falha ao gerar o insight para o relatório.");

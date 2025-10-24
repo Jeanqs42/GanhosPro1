@@ -69,6 +69,7 @@ const AppLayout: React.FC = () => {
     <div className="flex flex-col h-screen font-sans">
       <main className="flex-grow overflow-y-auto bg-brand-dark p-4 pb-20">
         <Routes>
+          {/* Rotas aninhadas sob /app */}
           <Route path="/" element={<Dashboard records={records} settings={settings} addOrUpdateRecord={addOrUpdateRecord} deleteRecord={deleteRecord} isPremium={isPremium} />} />
           <Route path="/history" element={<History records={records} deleteRecord={deleteRecord} settings={settings} />} />
           <Route path="/settings" element={<Settings settings={settings} setSettings={setSettings} isPremium={isPremium} />} />
@@ -77,22 +78,22 @@ const AppLayout: React.FC = () => {
       </main>
       <footer className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 shadow-lg">
         <nav className="flex justify-around items-center h-16">
-          <NavLink end to="/" className={({ isActive }) => `flex flex-col items-center justify-center w-full text-xs transition-colors ${isActive ? 'text-brand-primary' : 'text-gray-400 hover:text-brand-primary'}`}>
+          <NavLink end to="/app" className={({ isActive }) => `flex flex-col items-center justify-center w-full text-xs transition-colors ${isActive ? 'text-brand-primary' : 'text-gray-400 hover:text-brand-primary'}`}>
             <Home size={24} />
             <span>Início</span>
           </NavLink>
-          <NavLink to="/history" className={({ isActive }) => `flex flex-col items-center justify-center w-full text-xs transition-colors ${isActive ? 'text-brand-primary' : 'text-gray-400 hover:text-brand-primary'}`}>
+          <NavLink to="/app/history" className={({ isActive }) => `flex flex-col items-center justify-center w-full text-xs transition-colors ${isActive ? 'text-brand-primary' : 'text-gray-400 hover:text-brand-primary'}`}>
             <Database size={24} />
             <span>Histórico</span>
           </NavLink>
-           <NavLink to="/premium" className={({ isActive }) => `flex flex-col items-center justify-center w-full text-xs transition-colors ${isActive ? 'text-brand-primary' : 'text-gray-400 hover:text-brand-primary'}`}>
+           <NavLink to="/app/premium" className={({ isActive }) => `flex flex-col items-center justify-center w-full text-xs transition-colors ${isActive ? 'text-brand-primary' : 'text-gray-400 hover:text-brand-primary'}`}>
              <div className="relative">
               <Crown size={24} className={isPremium ? 'text-yellow-400' : 'text-brand-accent'} />
               {!isPremium && <span className="absolute -top-2 -right-2 bg-brand-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">PRO</span>}
              </div>
             <span>Premium</span>
           </NavLink>
-          <NavLink to="/settings" className={({ isActive }) => `flex flex-col items-center justify-center w-full text-xs transition-colors ${isActive ? 'text-brand-primary' : 'text-gray-400 hover:text-brand-primary'}`}>
+          <NavLink to="/app/settings" className={({ isActive }) => `flex flex-col items-center justify-center w-full text-xs transition-colors ${isActive ? 'text-brand-primary' : 'text-gray-400 hover:text-brand-primary'}`}>
             <SettingsIcon size={24} />
             <span>Ajustes</span>
           </NavLink>
