@@ -67,7 +67,7 @@ const AppLayout: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen font-sans">
-      <main className="flex-grow overflow-y-auto bg-brand-dark p-4"> {/* Removido pb-20 */}
+      <main className="flex-grow overflow-y-auto bg-brand-dark p-4 pb-20"> {/* Adicionado pb-20 */}
         <Routes>
           {/* Rotas aninhadas sob /app */}
           <Route path="/" element={<Dashboard records={records} settings={settings} addOrUpdateRecord={addOrUpdateRecord} deleteRecord={deleteRecord} isPremium={isPremium} />} />
