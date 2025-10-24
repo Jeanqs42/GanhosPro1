@@ -10,6 +10,7 @@ const ai = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 export const analyzeRecords = async (records: RunRecord[], settings: AppSettings): Promise<string> => {
     if (!apiKey || !ai) {
+        console.error("GEMINI_API_KEY is not configured for analyzeRecords.");
         throw new Error("Chave de API do Gemini não configurada. Defina GEMINI_API_KEY em .env.local.");
     }
 
@@ -40,18 +41,26 @@ export const analyzeRecords = async (records: RunRecord[], settings: AppSettings
         const result = await model.generateContent(prompt);
         const response = await result.response;
         return response.text();
-    } catch (error) {
+    } catch (error: any) {
         console.error("Gemini API error in analyzeRecords:", error);
-        throw new Error("Falha ao comunicar com o serviço de IA. Verifique sua chave de API e tente novamente.");
+        if (error.message && error.message.includes("API_KEY_INVALID")) {
+            throw new Error("Chave de API do Gemini inválida. Verifique sua chave em .env.local.");
+        } else if (error.message && error.message.includes("RESOURCE_EXHAUSTED")) {
+            throw new Error("Limite de uso da API do Gemini atingido. Tente novamente mais tarde.");
+        } else if (error.message && error.message.includes("NETWORK_ERROR")) {
+            throw new Error("Erro de rede ao conectar com a IA. Verifique sua conexão.");
+        }
+        throw new Error(`Falha ao comunicar com o serviço de IA para a análise: ${error.message || 'Erro desconhecido'}`);
     }
 };
 
 export const getChatFollowUp = async (
   records: RunRecord[],
   settings: AppSettings,
-  fullChatHistory: { role: 'user' | 'model'; parts: { text: string }[] }[] // Agora inclui a última mensagem do usuário
+  fullChatHistory: { role: 'user' | 'model'; parts: { text: string }[] }[]
 ): Promise<string> => {
     if (!apiKey || !ai) {
+        console.error("GEMINI_API_KEY is not configured for getChatFollowUp.");
         throw new Error("Chave de API do Gemini não configurada. Defina GEMINI_API_KEY em .env.local.");
     }
 
@@ -67,10 +76,8 @@ export const getChatFollowUp = async (
         parts: [{ text: `Aqui estão todos os registros de corrida do usuário e suas configurações. Use-os para responder às perguntas de forma detalhada, se necessário. Custo por KM: R$${settings.costPerKm.toFixed(2)}\n\nRegistros:\n${recordsSummary}` }]
     };
 
-    // A última mensagem do usuário já está incluída em fullChatHistory.
-    // Precisamos separar a última mensagem para sendMessage e o restante para o histórico de startChat.
     const latestUserMessage = fullChatHistory[fullChatHistory.length - 1];
-    const conversationHistoryForGemini = fullChatHistory.slice(0, -1); // Todas as mensagens ANTES da última do usuário
+    const conversationHistoryForGemini = fullChatHistory.slice(0, -1);
 
     const historyForChat = [
         contextMessage,
@@ -83,13 +90,19 @@ export const getChatFollowUp = async (
             history: historyForChat,
             systemInstruction: "Você é um especialista em finanças para motoristas de aplicativo. Responda às perguntas do usuário de forma curta e direta, usando os dados fornecidos e o histórico da conversa. Se a pergunta exigir detalhes específicos dos registros, consulte-os."
         });
-        // Envia APENAS a última mensagem do usuário
         const result = await chat.sendMessage(latestUserMessage.parts[0].text);
         const response = await result.response;
         return response.text();
-    } catch (error) {
+    } catch (error: any) {
         console.error("Gemini API error in getChatFollowUp:", error);
-        throw new Error("Falha ao comunicar com o serviço de IA para o chat.");
+        if (error.message && error.message.includes("API_KEY_INVALID")) {
+            throw new Error("Chave de API do Gemini inválida. Verifique sua chave em .env.local.");
+        } else if (error.message && error.message.includes("RESOURCE_EXHAUSTED")) {
+            throw new Error("Limite de uso da API do Gemini atingido. Tente novamente mais tarde.");
+        } else if (error.message && error.message.includes("NETWORK_ERROR")) {
+            throw new Error("Erro de rede ao conectar com a IA. Verifique sua conexão.");
+        }
+        throw new Error(`Falha ao comunicar com o serviço de IA para o chat: ${error.message || 'Erro desconhecido'}`);
     }
 };
 
@@ -99,6 +112,7 @@ export const getIntelligentReportAnalysis = async (
   metricLabel: string
 ): Promise<string> => {
   if (!apiKey || !ai) {
+    console.error("GEMINI_API_KEY is not configured for getIntelligentReportAnalysis.");
     throw new Error("Chave de API do Gemini não configurada. Defina GEMINI_API_KEY em .env.local.");
   }
 
@@ -122,8 +136,15 @@ export const getIntelligentReportAnalysis = async (
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini API error in getIntelligentReportAnalysis:", error);
-    throw new Error("Falha ao gerar o insight para o relatório.");
+    if (error.message && error.message.includes("API_KEY_INVALID")) {
+            throw new Error("Chave de API do Gemini inválida. Verifique sua chave em .env.local.");
+        } else if (error.message && error.message.includes("RESOURCE_EXHAUSTED")) {
+            throw new Error("Limite de uso da API do Gemini atingido. Tente novamente mais tarde.");
+        } else if (error.message && error.message.includes("NETWORK_ERROR")) {
+            throw new Error("Erro de rede ao conectar com a IA. Verifique sua conexão.");
+        }
+    throw new Error(`Falha ao gerar o insight para o relatório: ${error.message || 'Erro desconhecido'}`);
   }
 };
