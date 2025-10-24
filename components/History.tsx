@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { RunRecord, AppSettings } from '../types';
 import { Trash2, Calendar, Route, FileDown, FileText, Loader2 } from 'lucide-react';
 import { exportCSV, exportPDF } from '../utils/export';
-import { useOfflineSync } from '../hooks/useOfflineSync';
+// import { useOfflineSync } from '../hooks/useOfflineSync'; // Removido: Não é mais necessário para status visual
 
 interface HistoryProps {
   records: RunRecord[];
@@ -15,15 +15,15 @@ interface HistoryProps {
 const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) => {
   const navigate = useNavigate();
   
-  // Hook de sincronização offline - mantido para outras funcionalidades, mas o status visual será removido
-  const {
-    // isOnline, // Removido
-    // hasPendingOperations, // Removido
-    // syncInProgress, // Removido
-    // forcSync, // Removido
-    // pendingOperations, // Removido
-    // lastSyncTime, // Removido
-  } = useOfflineSync();
+  // Removido: Hook de sincronização offline e suas variáveis de status
+  // const {
+  //   isOnline,
+  //   hasPendingOperations,
+  //   syncInProgress,
+  //   forcSync,
+  //   pendingOperations,
+  //   lastSyncTime,
+  // } = useOfflineSync();
 
   const [isExportingCSV, setIsExportingCSV] = useState<boolean>(false);
   const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);

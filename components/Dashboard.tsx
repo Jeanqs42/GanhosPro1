@@ -4,8 +4,7 @@ import toast from 'react-hot-toast';
 import { DollarSign, Route, Clock, Wrench, Calculator, Save, Info, Edit, ArrowLeft, Loader2 } from 'lucide-react';
 import { RunRecord, AppSettings, CalculationResult } from '../types';
 import { safeRandomUUID } from '../utils/uuid';
-import { useOfflineSync } from '../hooks/useOfflineSync';
-
+// import { useOfflineSync } from '../hooks/useOfflineSync'; // Removido: Não é mais necessário para status visual
 
 interface DashboardProps {
   records: RunRecord[];
@@ -58,15 +57,15 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
     const navigate = useNavigate();
     const recordFromState = location.state?.record as RunRecord | undefined;
     
-    // Hook de sincronização offline - mantido para outras funcionalidades, mas o status visual será removido
-    const {
-        // isOnline, // Removido
-        // hasPendingOperations, // Removido
-        // syncInProgress, // Removido
-        // forcSync, // Removido
-        // lastSyncTime, // Removido
-        // pendingOperations, // Removido
-    } = useOfflineSync();
+    // Removido: Hook de sincronização offline e suas variáveis de status
+    // const {
+    //     isOnline,
+    //     hasPendingOperations,
+    //     syncInProgress,
+    //     forcSync,
+    //     lastSyncTime,
+    //     pendingOperations,
+    // } = useOfflineSync();
 
     // Inicializa isDetailsView e hasCalculated com base em recordFromState
     const [isDetailsView, setIsDetailsView] = useState<boolean>(!!recordFromState);
@@ -371,7 +370,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
     );
 
     return (
-        <div className="max-w-md mx-auto">
+        <div className="max-w-md mx-auto flex flex-col justify-center min-h-[calc(100vh-4rem)]"> {/* Adicionado flexbox para centralização vertical */}
              <h1 className="text-2xl font-bold text-center mb-2 text-brand-primary">
                  {isDetailsView ? 'Detalhes do Registro' : (hasCalculated && result ? 'Seu Resultado' : (recordFromState ? 'Editar Registro' : 'Calculadora Diária'))}
             </h1>
