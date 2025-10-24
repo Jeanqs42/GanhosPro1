@@ -1,11 +1,17 @@
-import { GoogleGenerativeAI } from "@google/genai"; // Corrigido para importação nomeada
+import * as GenAIModule from "@google/genai"; // Importa o módulo inteiro como namespace
 import { RunRecord, AppSettings } from '../types';
 
 // Validação e leitura da API Key (Vite)
 const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.GEMINI_API_KEY;
 console.log("GEMINI_API_KEY lida em geminiService:", apiKey ? "[definida]" : "[NÃO DEFINIDA]");
 
-// Instancia GoogleGenerativeAI diretamente
+// Acessa a classe GoogleGenerativeAI a partir do namespace importado
+const GoogleGenerativeAI = (GenAIModule as any).GoogleGenerativeAI || GenAIModule; // Tenta acessar como propriedade ou usa o próprio módulo se for a classe
+if (typeof GoogleGenerativeAI !== 'function') {
+    console.error("Não foi possível encontrar a classe GoogleGenerativeAI no módulo @google/genai. Conteúdo do módulo:", GenAIModule);
+    throw new Error("A classe GoogleGenerativeAI não foi carregada corretamente. Verifique a instalação do pacote.");
+}
+
 const ai = apiKey ? new GoogleGenerativeAI({ apiKey }) : null;
 
 export const analyzeRecords = async (records: RunRecord[], settings: AppSettings): Promise<string> => {
