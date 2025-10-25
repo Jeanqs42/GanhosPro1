@@ -2,27 +2,25 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Crown, Zap, BarChart2, Unlock, Loader2, MessageSquare, ArrowLeft, BrainCircuit, CalendarDays, Calculator, FileBarChart2, User, Bot } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, AreaChart, Area, ReferenceLine } from 'recharts'; // 'Cell' removido
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, AreaChart, Area, ReferenceLine } from 'recharts';
 import { RunRecord, AppSettings } from '../types';
 import { analyzeRecords, getChatFollowUp, getIntelligentReportAnalysis } from '../services/geminiService';
-import ReactMarkdown from 'react-markdown'; // Importar ReactMarkdown
+import ReactMarkdown from 'react-markdown';
 
 interface PremiumProps {
   records: RunRecord[];
   settings: AppSettings;
   isPremium: boolean;
   setIsPremium: (isPremium: boolean) => void;
-  // setSettings: (settings: AppSettings) => void; // Removido: prop não utilizada
 }
 
 type ActiveTool = 'menu' | 'insights' | 'reports' | 'periodic';
 type PeriodType = 'weekly' | 'monthly' | 'annual';
 
-const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPremium }) => { // Removido setSettings da desestruturação
+const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPremium }) => {
   const navigate = useNavigate();
   const [activeTool, setActiveTool] = useState<ActiveTool>('menu');
 
-  // Persistência simples de chat e análise
   const [analysis, setAnalysis] = useState<string>(localStorage.getItem('ganhospro_analysis') || '');
   const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'model'; parts: { text: string }[] }[]>(() => {
     try {
@@ -35,7 +33,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Reports
   const [isReportLoading, setIsReportLoading] = useState<boolean>(false);
   const [reportData, setReportData] = useState<any[]>([]);
   const [reportInsight, setReportInsight] = useState<string>('');
@@ -50,6 +47,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     metric: 'netProfit'
   });
   const [periodType, setPeriodType] = useState<PeriodType>('monthly');
+  const [selectedPeriodKey, setSelectedPeriodKey] = useState<string | null>(null); // Novo estado para o período selecionado
 
   const metricsInfo: { [key: string]: { label: string; unit: string } } = {
     netProfit: { label: 'Lucro Líquido', unit: 'R$' },
@@ -62,7 +60,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     kmDriven: { label: 'KM Rodados por Dia', unit: 'KM' },
   };
 
-
   useEffect(() => {
     if(activeTool === 'insights') {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -70,7 +67,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
   }, [chatHistory, isChatLoading, activeTool]);
 
   useEffect(() => {
-    // Persist analysis and chatHistory changes
     localStorage.setItem('ganhospro_analysis', analysis || '');
     localStorage.setItem('ganhospro_chat_history', JSON.stringify(chatHistory));
   }, [analysis, chatHistory]);
@@ -80,62 +76,137 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     toast.success('Parabéns! Você agora é um usuário Premium.');
   };
 
-  // Memoização pesada: periodicData depende de records, settings, periodType
-  const periodicData = useMemo(() => {
-    const getPeriodKey = (dateStr: string, period: PeriodType): string => {
-      const date = new Date(dateStr);
-      date.setUTCHours(12);
-      if (period === 'weekly') {
-        const firstDay = new Date(date.setDate(date.getDate() - date.getUTCDay()));
-        return `W${firstDay.toISOString().slice(0, 10)}`;
-      }
-      if (period === 'monthly') {
-        return date.toISOString().slice(0, 7);
-      }
-      return date.getUTCFullYear().toString();
-    };
+  const getPeriodKey = (dateStr: string, period: PeriodType): string => {
+    const date = new Date(dateStr);
+    date.setUTCHours(12);
+    if (period === 'weekly') {
+      const firstDay = new Date(date.setDate(date.getDate() - date.getUTCDay()));
+      return `W${firstDay.toISOString().slice(0, 10)}`;
+    }
+    if (period === 'monthly') {
+      return date.toISOString().slice(0, 7);
+    }
+    return date.getUTCFullYear().toString();
+  };
 
+  const formatPeriodLabel = (key: string, period: PeriodType): string => {
+    if (period === 'weekly') {
+      const date = new Date(key.substring(1));
+      return `Semana ${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`;
+    } else if (period === 'monthly') {
+      const [year, month] = key.split('-');
+      return `${month}/${year.slice(2)}`;
+    } else {
+      return key;
+    }
+  };
+
+  const periodicData = useMemo(() => {
     const sortedRecords = [...records].sort((a: RunRecord, b: RunRecord) => new Date(a.date).getTime() - new Date(b.date).getTime());
     const aggregated = sortedRecords.reduce((acc: any, record: RunRecord) => {
       const key = getPeriodKey(record.date, periodType);
       if (!acc[key]) {
-        acc[key] = { key, totalEarnings: 0, totalCosts: 0, kmDriven: 0, daysCount: 0, totalHoursWorked: 0 }; // Adicionado totalHoursWorked
+        acc[key] = { key, totalEarnings: 0, totalCosts: 0, kmDriven: 0, daysCount: 0, totalHoursWorked: 0 };
       }
       const carCost = record.kmDriven * settings.costPerKm;
       acc[key].totalEarnings += record.totalEarnings;
       acc[key].totalCosts += carCost + (record.additionalCosts || 0);
       acc[key].kmDriven += record.kmDriven;
       acc[key].daysCount += 1;
-      acc[key].totalHoursWorked += record.hoursWorked || 0; // Acumula horas trabalhadas
+      acc[key].totalHoursWorked += record.hoursWorked || 0;
       return acc;
     }, {} as any);
 
-    return Object.values(aggregated).map((item: any) => {
+    const result = Object.values(aggregated).map((item: any) => {
       const netProfit = item.totalEarnings - item.totalCosts;
-      let label = '';
-      if (periodType === 'weekly') {
-        const date = new Date(item.key.substring(1));
-        label = `Semana ${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`;
-      } else if (periodType === 'monthly') {
-        const [year, month] = item.key.split('-');
-        label = `${month}/${year.slice(2)}`;
-      } else {
-        label = item.key;
-      }
       return {
-        name: label,
+        name: formatPeriodLabel(item.key, periodType),
+        key: item.key, // Manter a chave para seleção
         ganhos: parseFloat(item.totalEarnings.toFixed(2)),
         custos: parseFloat(item.totalCosts.toFixed(2)),
         lucroLiquido: parseFloat(netProfit.toFixed(2)),
         lucroPorKm: item.kmDriven > 0 ? parseFloat((netProfit / item.kmDriven).toFixed(2)) : 0,
         kmRodados: parseFloat(item.kmDriven.toFixed(2)),
         ganhosPorKmBruto: item.kmDriven > 0 ? parseFloat((item.totalEarnings / item.kmDriven).toFixed(2)) : 0,
-        // custoPorKm: item.kmDriven > 0 ? parseFloat((item.totalCosts / item.kmDriven).toFixed(2)) : 0, // Removido
         margemLucro: item.totalEarnings > 0 ? parseFloat(((netProfit / item.totalEarnings) * 100).toFixed(2)) : 0,
-        totalHoursWorked: parseFloat(item.totalHoursWorked.toFixed(1)), // Adicionado
+        totalHoursWorked: parseFloat(item.totalHoursWorked.toFixed(1)),
       }
     });
-  }, [records, settings, periodType]);
+    
+    // Ordenar por chave para garantir que o último período seja o último no array
+    result.sort((a: any, b: any) => a.key.localeCompare(b.key));
+
+    // Definir o período selecionado como o mais recente se ainda não estiver definido
+    if (!selectedPeriodKey && result.length > 0) {
+      setSelectedPeriodKey(result[result.length - 1].key);
+    }
+
+    return result;
+  }, [records, settings, periodType, selectedPeriodKey]); // Adicionado selectedPeriodKey como dependência
+
+  // Dados detalhados para o gráfico de Evolução do Lucro Líquido
+  const detailedPeriodicData = useMemo(() => {
+    if (!selectedPeriodKey) return [];
+
+    const filteredRecords = records.filter((r: RunRecord) => getPeriodKey(r.date, periodType) === selectedPeriodKey)
+                                   .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const dailyDataMap = new Map<string, { date: string; lucroLiquido: number }>();
+    let cumulativeProfit = 0;
+
+    // Preencher com todos os dias/meses do período para garantir continuidade
+    const startDate = new Date(selectedPeriodKey.includes('W') ? selectedPeriodKey.substring(1) : selectedPeriodKey);
+    let endDate = new Date(startDate);
+
+    if (periodType === 'weekly') {
+      endDate.setDate(startDate.getDate() + 6);
+    } else if (periodType === 'monthly') {
+      endDate.setMonth(startDate.getMonth() + 1);
+      endDate.setDate(0); // Último dia do mês
+    } else { // annual
+      endDate.setFullYear(startDate.getFullYear() + 1);
+      endDate.setDate(0); // Último dia do ano
+      endDate.setMonth(11); // Dezembro
+    }
+
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dateKey = d.toISOString().split('T')[0];
+      dailyDataMap.set(dateKey, { date: dateKey, lucroLiquido: 0 });
+    }
+
+    filteredRecords.forEach(record => {
+      const dateKey = new Date(record.date).toISOString().split('T')[0];
+      const carCost = record.kmDriven * settings.costPerKm;
+      const netProfit = record.totalEarnings - (record.additionalCosts || 0) - carCost;
+      
+      const existing = dailyDataMap.get(dateKey);
+      if (existing) {
+        existing.lucroLiquido += netProfit;
+      } else {
+        dailyDataMap.set(dateKey, { date: dateKey, lucroLiquido: netProfit });
+      }
+    });
+
+    const result = Array.from(dailyDataMap.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    return result.map(item => {
+      cumulativeProfit += item.lucroLiquido;
+      return {
+        name: new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+        lucroLiquido: parseFloat(cumulativeProfit.toFixed(2)),
+      };
+    });
+
+  }, [records, settings, periodType, selectedPeriodKey]);
+
+  useEffect(() => {
+    // Atualizar selectedPeriodKey quando o tipo de período mudar
+    if (periodicData.length > 0) {
+      setSelectedPeriodKey(periodicData[periodicData.length - 1].key);
+    } else {
+      setSelectedPeriodKey(null);
+    }
+  }, [periodType, periodicData.length]); // Depende de periodicData.length para reagir a mudanças nos dados
 
   const handleAnalyze = async () => {
     if (records.length < 3) {
@@ -170,9 +241,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     try {
       const response = await getChatFollowUp(records, settings, newHistory);
       setChatHistory(prev => [...prev, { role: 'model' as const, parts: [{ text: response }] }]);
-    } catch (error: any) { // Adicionado ': any' para acessar 'message'
+    } catch (error: any) {
       console.error('Chat error:', error);
-      // Exibe a mensagem de erro específica retornada pelo serviço Gemini
       toast.error(`Erro: ${error.message || 'Ocorreu um erro desconhecido.'}`);
       setChatHistory(prev => prev.slice(0, -1));
     } finally {
@@ -180,7 +250,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     }
   };
 
-  // Validações extras dos Reports
   const validateReportConfig = (): string | null => {
     if (!reportConfig.startDate || !reportConfig.endDate) return 'Selecione um período de datas.';
     const start = new Date(reportConfig.startDate);
@@ -256,7 +325,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     }
   };
 
-  // UI: estados desativados e spinners uniformes
   const LoadingButton: React.FC<{ loading: boolean; onClick: () => void; label: string; icon?: React.ReactNode; ariaLabel?: string }>= ({ loading, onClick, label, icon, ariaLabel }) => (
     <button
       onClick={onClick}
@@ -280,7 +348,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
         {icon && <span className="mr-2">{icon}</span>}
         {title}
       </h1>
-      {activeTool !== 'menu' && <div className="w-8"></div>} {/* Spacer */}
+      {activeTool !== 'menu' && <div className="w-8"></div>}
     </div>
   );
 
@@ -337,7 +405,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
         {analysis && (
           <div className="mt-6 bg-gray-900/50 p-4 rounded-lg">
             <h3 className="font-bold text-lg mb-2 text-brand-primary">Resultado da Análise:</h3>
-            <div className="text-gray-300 text-sm leading-relaxed markdown-content"> {/* Adicionada classe markdown-content */}
+            <div className="text-gray-300 text-sm leading-relaxed markdown-content">
               <ReactMarkdown
                 components={{
                   h1: ({node, ...props}) => <h1 className="text-2xl font-bold text-brand-primary mt-4 mb-2" {...props} />,
@@ -514,9 +582,9 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
         acc.ganhos += item.ganhos;
         acc.custos += item.custos;
         acc.lucroLiquido += item.lucroLiquido;
-        acc.totalHoursWorked += item.totalHoursWorked; // Adicionado
+        acc.totalHoursWorked += item.totalHoursWorked;
         return acc;
-    }, { ganhos: 0, custos: 0, lucroLiquido: 0, totalHoursWorked: 0 }); // Adicionado totalHoursWorked
+    }, { ganhos: 0, custos: 0, lucroLiquido: 0, totalHoursWorked: 0 });
 
     return (
         <div className="animate-fade-in-up">
@@ -543,15 +611,15 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                 </div>
             ) : (
                 <>
-                <div className="grid grid-cols-4 gap-2 mb-4 text-center"> {/* Ajustado para 4 colunas */}
+                <div className="grid grid-cols-4 gap-2 mb-4 text-center">
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-blue-400">Ganhos</p><p className="font-bold text-sm">{totals.ganhos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-yellow-400">Custos</p><p className="font-bold text-sm">{totals.custos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-green-400">Lucro</p><p className="font-bold text-sm">{totals.lucroLiquido.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
-                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-purple-400">Horas</p><p className="font-bold text-sm">{totals.totalHoursWorked.toFixed(1)} h</p></div> {/* Adicionado */}
+                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-purple-400">Horas</p><p className="font-bold text-sm">{totals.totalHoursWorked.toFixed(1)} h</p></div>
                 </div>
 
                 <div className="space-y-6">
-                    {/* Graph 1 */}
+                    {/* Graph 1: Ganhos Brutos vs. Custos Totais */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Ganhos Brutos vs. Custos Totais</h3>
                         <div className="w-full h-60">
@@ -571,9 +639,26 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                      {/* Graph 2: Evolução do Lucro Líquido (AreaChart) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Evolução do Lucro Líquido</h3>
+                        {periodicData.length > 0 && (
+                          <div className="mb-4">
+                            <label htmlFor="period-select" className="sr-only">Selecionar Período</label>
+                            <select
+                              id="period-select"
+                              value={selectedPeriodKey || ''}
+                              onChange={(e) => setSelectedPeriodKey(e.target.value)}
+                              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none"
+                            >
+                              {periodicData.map(p => (
+                                <option key={p.key} value={p.key}>
+                                  {p.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                         <div className="w-full h-60">
                             <ResponsiveContainer>
-                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <AreaChart data={detailedPeriodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="colorLucro" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
@@ -588,13 +673,13 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
                                     <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
-                                    <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" /> {/* Linha de referência para o zero */}
+                                    <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" />
                                     <Area type="monotone" dataKey="lucroLiquido" stroke="#10b981" fillOpacity={1} fill="url(#colorLucro)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
-                     {/* Graph 3 */}
+                     {/* Graph 3: Desempenho de Lucro por KM (R$) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Desempenho de Lucro por KM (R$)</h3>
                         <div className="w-full h-60">
@@ -610,7 +695,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         </div>
                     </div>
 
-                    {/* Graph 4 */}
+                    {/* Graph 4: KM Rodados */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">KM Rodados</h3>
                         <div className="w-full h-60">
@@ -626,23 +711,23 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         </div>
                     </div>
 
-                    {/* Graph 5 */}
+                    {/* Graph 5: Total de Horas Trabalhadas */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
-                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Total de Horas Trabalhadas</h3> {/* Novo Título */}
+                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Total de Horas Trabalhadas</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value} h`} /> {/* Formatador para horas */}
+                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value} h`} />
                                     <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toFixed(1)} h`} />
-                                    <Bar dataKey="totalHoursWorked" name="Horas" fill="#a855f7" /> {/* dataKey e fill atualizados */}
+                                    <Bar dataKey="totalHoursWorked" name="Horas" fill="#a855f7" />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
-                    {/* Graph 6 (Antigo Graph 7) */}
+                    {/* Graph 6: R$/KM Bruto */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">R$/KM Bruto</h3>
                         <div className="w-full h-60">
@@ -658,7 +743,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         </div>
                     </div>
 
-                    {/* Graph 7 (Antigo Graph 8) */}
+                    {/* Graph 7: Margem de Lucro (%) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Margem de Lucro (%)</h3>
                         <div className="w-full h-60">
@@ -673,15 +758,12 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                             </ResponsiveContainer>
                         </div>
                     </div>
-
-
                 </div>
                 </>
             )}
         </div>
     );
   };
-
 
   return (
     <div className="max-w-md mx-auto text-white">
