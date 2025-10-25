@@ -615,6 +615,9 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       { label: 'Lucro por Hora', current: lastPeriodData?.lucroLiquidoPorHora, previous: previousPeriodData?.lucroLiquidoPorHora, unit: 'R$/h' },
     ];
 
+    const tooltipContentStyle = { backgroundColor: '#1f2937', border: '1px solid #4a5568', color: '#f9fafb' };
+    const tooltipLabelStyle = { color: '#10b981' };
+
     return (
         <div className="animate-fade-in-up">
             {renderHeader('Análise Periódica', <CalendarDays/>)}
@@ -688,7 +691,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                    <Tooltip 
+                                        contentStyle={tooltipContentStyle}
+                                        labelStyle={tooltipLabelStyle}
+                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, 'Valor']} 
+                                    />
                                     <Legend wrapperStyle={{fontSize: "12px"}}/>
                                     <Bar dataKey="ganhos" fill="url(#gradientGanhos)" name="Ganhos" activeBar={false} />
                                     <Bar dataKey="custos" fill="url(#gradientCustos)" name="Custos" activeBar={false} />
@@ -732,7 +739,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                    <Tooltip 
+                                        contentStyle={tooltipContentStyle}
+                                        labelStyle={tooltipLabelStyle}
+                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, 'Lucro Líquido Acumulado']} 
+                                    />
                                     <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" />
                                     <Area type="monotone" dataKey="lucroLiquido" stroke="#10b981" fillOpacity={1} fill="url(#colorLucro)" />
                                 </AreaChart>
@@ -754,7 +765,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                    <Tooltip 
+                                        contentStyle={tooltipContentStyle}
+                                        labelStyle={tooltipLabelStyle}
+                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, 'Lucro/KM']} 
+                                    />
                                     <Bar dataKey="lucroPorKm" name="Lucro/KM" fill="url(#gradientLucroKm)" activeBar={false} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -776,7 +791,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value} KM`} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toFixed(1)} KM`} />
+                                    <Tooltip 
+                                        contentStyle={tooltipContentStyle}
+                                        labelStyle={tooltipLabelStyle}
+                                        formatter={(value: number) => [`${Number(value).toFixed(1)} KM`, 'KM Rodados']} 
+                                    />
                                     <Bar dataKey="kmRodados" name="KM" fill="url(#gradientKm)" activeBar={false} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -798,7 +817,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value} h`} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toFixed(1)} h`} />
+                                    <Tooltip 
+                                        contentStyle={tooltipContentStyle}
+                                        labelStyle={tooltipLabelStyle}
+                                        formatter={(value: number) => [`${Number(value).toFixed(1)} h`, 'Horas Trabalhadas']} 
+                                    />
                                     <Bar dataKey="totalHoursWorked" name="Horas" fill="url(#gradientHoras)" activeBar={false} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -820,7 +843,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `R$${value}`} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                    <Tooltip 
+                                        contentStyle={tooltipContentStyle}
+                                        labelStyle={tooltipLabelStyle}
+                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h`, 'Ganhos por Hora']} 
+                                    />
                                     <Bar dataKey="ganhosPorHora" name="Ganhos/h" fill="url(#gradientGanhosPorHora)" activeBar={false} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -842,7 +869,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `R$${value}`} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                    <Tooltip 
+                                        contentStyle={tooltipContentStyle}
+                                        labelStyle={tooltipLabelStyle}
+                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h`, 'Lucro Líquido por Hora']} 
+                                    />
                                     <Bar dataKey="lucroLiquidoPorHora" name="Lucro Líquido/h" fill="url(#gradientLucroLiquidoPorHora)" activeBar={false} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -864,7 +895,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                    <Tooltip 
+                                        contentStyle={tooltipContentStyle}
+                                        labelStyle={tooltipLabelStyle}
+                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, 'R$/KM Bruto']} 
+                                    />
                                     <Bar dataKey="ganhosPorKmBruto" name="R$/KM Bruto" fill="url(#gradientGanhosKmBruto)" activeBar={false} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -886,7 +921,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value}%`} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toFixed(1)}%`} />
+                                    <Tooltip 
+                                        contentStyle={tooltipContentStyle}
+                                        labelStyle={tooltipLabelStyle}
+                                        formatter={(value: number) => [`${Number(value).toFixed(1)}%`, 'Margem de Lucro']} 
+                                    />
                                     <Bar dataKey="margemLucro" name="Margem %" fill="url(#gradientMargem)" activeBar={false} />
                                 </BarChart>
                             </ResponsiveContainer>
