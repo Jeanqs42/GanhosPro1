@@ -1,6 +1,6 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
-import { Database, Settings as SettingsIcon, Crown, Home, Loader2 } from 'lucide-react'; // Importado Loader2
+import { Database, Settings as SettingsIcon, Crown, Home, Loader2 } from 'lucide-react';
 // Importações lazy-loaded
 const Dashboard = React.lazy(() => import('./Dashboard'));
 const History = React.lazy(() => import('./History'));
@@ -23,12 +23,15 @@ const AppLayout: React.FC = () => {
   const [records, setRecords] = useState<RunRecord[]>([]);
   const [settings, setSettings] = useLocalStorage<AppSettings>('ganhospro_settings', { costPerKm: 0.75 });
   const [isPremium, setIsPremium] = useLocalStorage<boolean>('ganhospro_is_premium', false);
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState<boolean>(true); // Novo estado de carregamento
 
   useEffect(() => {
     if (isInitialized) {
       const fetchRecords = async () => {
+        setIsLoadingInitialData(true); // Inicia o carregamento
         const fetchedRecords = await getAllRecords();
         setRecords(fetchedRecords);
+        setIsLoadingInitialData(false); // Finaliza o carregamento
       };
       fetchRecords();
     }
@@ -62,13 +65,20 @@ const AppLayout: React.FC = () => {
   return (
     <div className="flex flex-col h-screen font-sans">
       <main className="flex-grow overflow-y-auto bg-brand-dark p-4 pb-20">
-        <Suspense fallback={<div className="text-center text-gray-400 mt-10"><Loader2 className="animate-spin mx-auto w-8 h-8 text-brand-primary" /><p className="mt-2">Carregando...</p></div>}>
-          <Routes>
-            <Route path="/" element={<Dashboard records={records} settings={settings} addOrUpdateRecord={addOrUpdateRecord} deleteRecord={deleteRecord} isPremium={isPremium} />} />
-            <Route path="/history" element={<History records={records} deleteRecord={deleteRecord} settings={settings} />} />
-            <Route path="/settings" element={<Settings settings={settings} setSettings={setSettings} isPremium={isPremium} />} />
-            <Route path="/premium" element={<Premium records={records} settings={settings} isPremium={isPremium} setIsPremium={setIsPremium} />} />
-          </Routes>
+        <Suspense fallback={<div className="text-center text-gray-400 mt-10"><Loader2 className="animate-spin mx-auto w-8 h-8 text-brand-primary" /><p className="mt-2">Carregando componente...</p></div>}>
+          {isLoadingInitialData ? ( // Exibe o loader enquanto os dados iniciais estão sendo carregados
+            <div className="text-center text-gray-400 mt-10">
+              <Loader2 className="animate-spin mx-auto w-8 h-8 text-brand-primary" />
+              <p className="mt-2">Carregando dados iniciais...</p>
+            </div>
+          ) : (
+            <Routes>
+              <Route path="/" element={<Dashboard records={records} settings={settings} addOrUpdateRecord={addOrUpdateRecord} deleteRecord={deleteRecord} isPremium={isPremium} />} />
+              <Route path="/history" element={<History records={records} deleteRecord={deleteRecord} settings={settings} />} />
+              <Route path="/settings" element={<Settings settings={settings} setSettings={setSettings} isPremium={isPremium} />} />
+              <Route path="/premium" element={<Premium records={records} settings={settings} isPremium={isPremium} setIsPremium={setIsPremium} />} />
+            </Routes>
+          )}
         </Suspense>
       </main>
       <footer className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 shadow-lg">

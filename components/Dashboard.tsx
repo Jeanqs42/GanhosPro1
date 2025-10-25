@@ -4,13 +4,12 @@ import toast from 'react-hot-toast';
 import { DollarSign, Route, Clock, Wrench, Calculator, Save, Info, Edit, ArrowLeft, Loader2 } from 'lucide-react';
 import { RunRecord, AppSettings, CalculationResult } from '../types';
 import { safeRandomUUID } from '../utils/uuid';
-// import { useOfflineSync } from '../hooks/useOfflineSync'; // Removido: Não é mais necessário para status visual
 
 interface DashboardProps {
   records: RunRecord[];
   settings: AppSettings;
-  addOrUpdateRecord: (record: RunRecord) => Promise<boolean>; // Agora recebe a função do AppLayout
-  deleteRecord: (id: string) => Promise<boolean>; // Agora recebe a função do AppLayout
+  addOrUpdateRecord: (record: RunRecord) => Promise<boolean>;
+  deleteRecord: (id: string) => Promise<boolean>;
   isPremium: boolean;
 }
 
@@ -23,8 +22,9 @@ const InputField = React.memo<{
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; 
   placeholder: string; 
   type?: string; 
-  isHighlighted?: boolean 
-}>(({ icon, label, id, value, onChange, placeholder, type = "number", isHighlighted = false }) => (
+  isHighlighted?: boolean;
+  error?: string; // Novo prop para mensagem de erro
+}>(({ icon, label, id, value, onChange, placeholder, type = "number", isHighlighted = false, error }) => (
     <div className="mb-4">
         <label htmlFor={id} className={`flex items-center text-sm font-medium text-gray-300 mb-2 ${isHighlighted ? 'font-bold text-lg text-white' : ''}`}>
             {icon}
@@ -36,11 +36,12 @@ const InputField = React.memo<{
             value={value}
             onChange={onChange}
             placeholder={placeholder}
-            className={`w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-primary focus:outline-none transition ${isHighlighted ? 'py-4 text-xl border-brand-primary' : ''}`}
+            className={`w-full bg-gray-700 border rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-primary focus:outline-none transition ${isHighlighted ? 'py-4 text-xl border-brand-primary' : ''} ${error ? 'border-red-500' : 'border-gray-600'}`}
             step="0.01"
             min="0"
             aria-label={label}
         />
+        {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
     </div>
 ));
 
@@ -57,17 +58,6 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
     const navigate = useNavigate();
     const recordFromState = location.state?.record as RunRecord | undefined;
     
-    // Removido: Hook de sincronização offline e suas variáveis de status
-    // const {
-    //     isOnline,
-    //     hasPendingOperations,
-    //     syncInProgress,
-    //     forcSync,
-    //     lastSyncTime,
-    //     pendingOperations,
-    // } = useOfflineSync();
-
-    // Inicializa isDetailsView e hasCalculated com base em recordFromState
     const [isDetailsView, setIsDetailsView] = useState<boolean>(!!recordFromState);
     const [hasCalculated, setHasCalculated] = useState<boolean>(!!recordFromState);
 
@@ -80,17 +70,55 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
 
     const [isCalculating, setIsCalculating] = useState<boolean>(false);
     const [isSaving, setIsSaving] = useState<boolean>(false);
-    
-    const handleCalculateClick = async () => {
-        setIsCalculating(true);
+
+    // Estados para erros de validação
+    const [errors, setErrors] = useState<{
+        totalEarnings?: string;
+        kmDriven?: string;
+        date?: string;
+        hoursWorked?: string;
+        additionalCosts?: string;
+    }>({});
+
+    const validateInputs = () => {
+        const newErrors: typeof errors = {};
         const earnings = parseFloat(totalEarnings);
         const km = parseFloat(kmDriven);
+        const hours = parseFloat(hoursWorked);
+        const costs = parseFloat(additionalCosts);
 
-        if (isNaN(earnings) || isNaN(km) || earnings <= 0 || km <= 0) {
-            toast.error('Ganhos do Dia e KM Rodado são obrigatórios e devem ser maiores que zero.');
-            setIsCalculating(false);
+        if (isNaN(earnings) || earnings <= 0) {
+            newErrors.totalEarnings = 'Ganhos do Dia é obrigatório e deve ser maior que zero.';
+        }
+        if (isNaN(km) || km <= 0) {
+            newErrors.kmDriven = 'KM Rodado é obrigatório e deve ser maior que zero.';
+        }
+        if (!date) {
+            newErrors.date = 'A data é obrigatória.';
+        } else if (new Date(date) > new Date()) {
+            newErrors.date = 'A data não pode ser futura.';
+        }
+        if (hoursWorked && (isNaN(hours) || hours < 0)) {
+            newErrors.hoursWorked = 'Horas Trabalhadas deve ser um número válido e não negativo.';
+        }
+        if (additionalCosts && (isNaN(costs) || costs < 0)) {
+            newErrors.additionalCosts = 'Custos Adicionais deve ser um número válido e não negativo.';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+    
+    const handleCalculateClick = async () => {
+        if (!validateInputs()) {
+            toast.error('Por favor, corrija os erros no formulário.');
             return;
         }
+
+        setIsCalculating(true);
+        // As variáveis 'earnings' e 'km' não são usadas diretamente aqui,
+        // os valores são lidos dos estados 'totalEarnings' e 'kmDriven'
+        // no useMemo 'result'. Removendo as declarações locais para evitar TS6133.
 
         const existingRecord = records.find((r: RunRecord) => r.date === date && r.id !== id);
 
@@ -114,7 +142,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                             onClick={() => {
                                 toast.dismiss(t.id);
                                 setHasCalculated(true);
-                                setIsDetailsView(false); // Garante que não está no modo de detalhes para um novo cálculo
+                                setIsDetailsView(false);
                                 setIsCalculating(false);
                             }}
                             className="flex-1 bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
@@ -129,47 +157,49 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
             });
         } else {
             setHasCalculated(true);
-            setIsDetailsView(false); // Garante que não está no modo de detalhes para um novo cálculo
+            setIsDetailsView(false);
             setIsCalculating(false);
         }
     };
     
     useEffect(() => {
         if (recordFromState) {
-            // Se um registro é passado via state, preencha os campos do formulário
             setId(recordFromState.id);
             setDate(recordFromState.date);
             setTotalEarnings(recordFromState.totalEarnings?.toString() || '');
             setKmDriven(recordFromState.kmDriven?.toString() || '');
             setHoursWorked(recordFromState.hoursWorked?.toString() || '');
             setAdditionalCosts(recordFromState.additionalCosts?.toString() || '');
-            setIsDetailsView(true); // Define como true para mostrar a visualização de detalhes imediatamente
-            setHasCalculated(true); // Define como true para mostrar os resultados imediatamente
+            setIsDetailsView(true);
+            setHasCalculated(true);
         } else {
-            // Se nenhum registro é passado, garanta que o formulário esteja limpo para um novo cálculo.
-            setId(safeRandomUUID()); // Gera um novo ID para um novo registro
+            setId(safeRandomUUID());
             setDate(new Date().toISOString().split('T')[0]);
             setTotalEarnings('');
             setKmDriven('');
             setHoursWorked('');
             setAdditionalCosts('');
-            setIsDetailsView(false); // Garante que estamos no modo de entrada
-            setHasCalculated(false); // Garante que estamos no modo de entrada
+            setIsDetailsView(false);
+            setHasCalculated(false);
+            setErrors({}); // Limpa erros ao resetar
         }
     }, [recordFromState]);
 
     const handleSave = async () => {
-        setIsSaving(true);
+        if (!validateInputs()) {
+            toast.error('Por favor, corrija os erros no formulário antes de salvar.');
+            return;
+        }
         if (!hasCalculated) {
             toast.error('Clique em "Calcular" antes de salvar.');
-            setIsSaving(false);
             return;
         }
         if (!result) {
             toast.error('Calcule os resultados antes de salvar.');
-            setIsSaving(false);
             return;
         }
+
+        setIsSaving(true);
 
         const { isUpdating, recordToOverwrite, canSaveNewRecord } = recordValidation;
 
@@ -183,7 +213,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                     <div className="flex w-full space-x-2">
                          <button
                             onClick={() => {
-                                navigate('/app/history'); // Redireciona para o histórico
+                                navigate('/app/history');
                                 toast.dismiss(t.id);
                             }}
                             className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
@@ -193,7 +223,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                         </button>
                         <button
                             onClick={() => {
-                                navigate('/app/premium'); // Redireciona para o premium
+                                navigate('/app/premium');
                                 toast.dismiss(t.id);
                             }}
                             className="flex-1 bg-brand-accent hover:opacity-90 text-gray-900 font-bold py-2 px-4 rounded-lg text-sm transition-colors"
@@ -211,7 +241,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
         }
 
         const record: RunRecord = {
-            id, // Use the current ID state, which is from recordFromState if editing
+            id,
             date,
             totalEarnings: parseFloat(totalEarnings),
             kmDriven: parseFloat(kmDriven),
@@ -219,7 +249,6 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
             additionalCosts: additionalCosts ? parseFloat(additionalCosts) : undefined,
         };
 
-        // Usar a função addOrUpdateRecord passada via props do AppLayout
         const saveSuccess = await addOrUpdateRecord(record);
         
         if (!saveSuccess) {
@@ -228,9 +257,8 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
             return;
         }
 
-        // Se houver registro para sobrescrever, deletar o antigo
         if (recordToOverwrite) {
-            await deleteRecord(recordToOverwrite.id); // Usar a função deleteRecord passada via props
+            await deleteRecord(recordToOverwrite.id);
         }
         
         let successMessage: string;
@@ -244,7 +272,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
 
         toast.success(successMessage);
         setIsSaving(false);
-        navigate('/app/history'); // Redireciona para o histórico após salvar/atualizar
+        navigate('/app/history');
     };
 
     const handleReset = () => {
@@ -256,10 +284,10 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
         setAdditionalCosts('');
         setIsDetailsView(false);
         setHasCalculated(false);
-        navigate('/app', { state: {}, replace: true }); // Redireciona para a calculadora diária limpa
+        setErrors({}); // Limpa erros ao resetar
+        navigate('/app', { state: {}, replace: true });
     };
 
-    // Memoized calculation function
     const calculateResults = useCallback((
         totalEarnings: number,
         kmDriven: number,
@@ -288,7 +316,6 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
         };
     }, []);
 
-    // Memoized result calculation
     const result = useMemo(() => {
         const earnings = parseFloat(totalEarnings);
         const km = parseFloat(kmDriven);
@@ -302,7 +329,6 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
         return calculateResults(earnings, km, hours, costs, settings.costPerKm);
     }, [totalEarnings, kmDriven, hoursWorked, additionalCosts, settings.costPerKm, calculateResults]);
 
-    // Memoized formatted results
     const formattedResults = useMemo(() => {
       if (!result) return null;
       return {
@@ -317,7 +343,6 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
       }
     }, [result]);
 
-    // Memoized record validation
     const recordValidation = useMemo(() => {
         const isUpdating = records.some((r: RunRecord) => r.id === id);
         const recordToOverwrite = records.find((r: RunRecord) => r.date === date && r.id !== id);
@@ -328,7 +353,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
 
     const renderResultView = (isDetails: boolean) => (
         <div className="bg-gray-800 p-6 rounded-lg shadow-xl animate-fade-in-up mb-4">
-            <h2 className="text-xl font-semibold text-center mb-4 text-white"> {/* Adicionado text-white aqui */}
+            <h2 className="text-xl font-semibold text-center mb-4 text-white">
                 {isDetails ? `Detalhes de ${new Date(date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}` : 'Resumo do Dia'}
             </h2>
             <div className="grid grid-cols-2 gap-4">
@@ -370,11 +395,10 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
     );
 
     return (
-        <div className="max-w-md mx-auto flex flex-col justify-center min-h-[calc(100vh-4rem)]"> {/* Adicionado flexbox para centralização vertical */}
+        <div className="max-w-md mx-auto flex flex-col justify-center min-h-[calc(100vh-4rem)]">
              <h1 className="text-2xl font-bold text-center mb-2 text-brand-primary">
                  {isDetailsView ? 'Detalhes do Registro' : (hasCalculated && result ? 'Seu Resultado' : (recordFromState ? 'Editar Registro' : 'Calculadora Diária'))}
             </h1>
-            {/* Removido o bloco de status de conectividade */}
 
             {settings.costPerKm === 0 && (
                 <div className="bg-yellow-900 border border-yellow-700 text-yellow-200 px-4 py-3 rounded-lg relative mb-4 text-sm flex items-start" role="alert">
@@ -390,16 +414,17 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
             {hasCalculated && result && isDetailsView ? renderResultView(true) : null}
 
             {!hasCalculated && (
-                <div className="bg-gray-800 p-6 rounded-lg shadow-xl mb-4 animate-fade-in-up"> {/* Alterado mb-6 para mb-4 */}
-                    <InputField icon={<DollarSign size={18}/>} label="Ganhos do Dia (R$)" id="totalEarnings" value={totalEarnings} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTotalEarnings(e.target.value)} placeholder="Ex: 250.50" isHighlighted />
-                    <InputField icon={<Route size={18}/>} label="KM Rodado" id="kmDriven" value={kmDriven} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setKmDriven(e.target.value)} placeholder="Ex: 180" isHighlighted />
-                    <InputField icon={<Clock size={18}/>} label="Horas Trabalhadas (Opcional)" id="hoursWorked" value={hoursWorked} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHoursWorked(e.target.value)} placeholder="Ex: 8.5" />
-                    <InputField icon={<Wrench size={18}/>} label="Custos Adicionais (Opcional)" id="additionalCosts" value={additionalCosts} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAdditionalCosts(e.target.value)} placeholder="Ex: 25 (água, balas)" />
+                <div className="bg-gray-800 p-6 rounded-lg shadow-xl mb-4 animate-fade-in-up">
+                    <InputField icon={<DollarSign size={18}/>} label="Ganhos do Dia (R$)" id="totalEarnings" value={totalEarnings} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setTotalEarnings(e.target.value); setErrors(prev => ({ ...prev, totalEarnings: undefined })); }} placeholder="Ex: 250.50" isHighlighted error={errors.totalEarnings} />
+                    <InputField icon={<Route size={18}/>} label="KM Rodado" id="kmDriven" value={kmDriven} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setKmDriven(e.target.value); setErrors(prev => ({ ...prev, kmDriven: undefined })); }} placeholder="Ex: 180" isHighlighted error={errors.kmDriven} />
+                    <InputField icon={<Clock size={18}/>} label="Horas Trabalhadas (Opcional)" id="hoursWorked" value={hoursWorked} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setHoursWorked(e.target.value); setErrors(prev => ({ ...prev, hoursWorked: undefined })); }} placeholder="Ex: 8.5" error={errors.hoursWorked} />
+                    <InputField icon={<Wrench size={18}/>} label="Custos Adicionais (Opcional)" id="additionalCosts" value={additionalCosts} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setAdditionalCosts(e.target.value); setErrors(prev => ({ ...prev, additionalCosts: undefined })); }} placeholder="Ex: 25 (água, balas)" error={errors.additionalCosts} />
                     <div className="mb-4">
                         <label htmlFor="date" className="flex items-center text-sm font-medium text-gray-300 mb-2">
                             <span className="ml-2">Data</span>
                         </label>
-                        <input type="date" id="date" value={date} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDate(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-primary focus:outline-none transition" aria-label="Data do Registro" />
+                        <input type="date" id="date" value={date} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setDate(e.target.value); setErrors(prev => ({ ...prev, date: undefined })); }} className={`w-full bg-gray-700 border rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-primary focus:outline-none transition ${errors.date ? 'border-red-500' : 'border-gray-600'}`} aria-label="Data do Registro" />
+                        {errors.date && <p className="text-red-400 text-xs mt-1">{errors.date}</p>}
                     </div>
                     <button onClick={handleCalculateClick} disabled={isCalculating} className="w-full bg-brand-primary hover:bg-brand-secondary text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-transform transform hover:scale-105" aria-label="Calcular Ganhos do Dia">
                         {isCalculating ? <Loader2 className="animate-spin mr-2" size={20} /> : <Calculator size={20} className="mr-2"/>}
