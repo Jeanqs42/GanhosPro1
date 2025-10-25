@@ -183,7 +183,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                     <div className="flex w-full space-x-2">
                          <button
                             onClick={() => {
-                                navigate('/history');
+                                navigate('/app/history'); // Redireciona para o histórico
                                 toast.dismiss(t.id);
                             }}
                             className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
@@ -193,7 +193,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                         </button>
                         <button
                             onClick={() => {
-                                navigate('/premium');
+                                navigate('/app/premium'); // Redireciona para o premium
                                 toast.dismiss(t.id);
                             }}
                             className="flex-1 bg-brand-accent hover:opacity-90 text-gray-900 font-bold py-2 px-4 rounded-lg text-sm transition-colors"
@@ -244,7 +244,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
 
         toast.success(successMessage);
         setIsSaving(false);
-        navigate('/history');
+        navigate('/app/history'); // Redireciona para o histórico após salvar/atualizar
     };
 
     const handleReset = () => {
@@ -256,7 +256,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
         setAdditionalCosts('');
         setIsDetailsView(false);
         setHasCalculated(false);
-        navigate('/', { state: {}, replace: true });
+        navigate('/app', { state: {}, replace: true }); // Redireciona para a calculadora diária limpa
     };
 
     // Memoized calculation function
@@ -349,7 +349,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                         <Edit size={20} className="mr-2"/>
                         Editar Registro
                     </button>
-                    <button onClick={() => navigate('/history')} className="w-full mt-4 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition" aria-label="Voltar ao Histórico">
+                    <button onClick={() => navigate('/app/history')} className="w-full mt-4 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition" aria-label="Voltar ao Histórico">
                         <ArrowLeft size={20} className="mr-2" />
                         Voltar ao Histórico
                     </button>
@@ -381,7 +381,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
                     <Info size={18} className="mr-3 mt-1 flex-shrink-0" />
                     <div>
                         <strong className="font-bold">Atenção!</strong>
-                        <span className="block sm:inline ml-1">Seu custo por KM está definido como 0. Vá para a tela de <button onClick={() => navigate('/settings')} className="font-bold underline" aria-label="Ir para Ajustes">Ajustes</button> para configurar e obter cálculos precisos.</span>
+                        <span className="block sm:inline ml-1">Seu custo por KM está definido como 0. Vá para a tela de <button onClick={() => navigate('/app/settings')} className="font-bold underline" aria-label="Ir para Ajustes">Ajustes</button> para configurar e obter cálculos precisos.</span>
                     </div>
                 </div>
             )}
