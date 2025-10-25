@@ -58,6 +58,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     carCostOnly: { label: 'Custo do Carro', unit: 'R$' },
     additionalCostsOnly: { label: 'Custos Adicionais', unit: 'R$' },
     kmDriven: { label: 'KM Rodados por Dia', unit: 'KM' },
+    hoursWorked: { label: 'Horas Trabalhadas', unit: 'h' }, // Nova métrica
   };
 
   useEffect(() => {
@@ -298,6 +299,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
         case 'carCostOnly': value = carCost; break;
         case 'additionalCostsOnly': value = additionalCosts; break;
         case 'kmDriven': value = r.kmDriven; break;
+        case 'hoursWorked': value = r.hoursWorked || 0; break; // Nova lógica para horas trabalhadas
         default: value = netProfit;
       }
       return {
@@ -496,6 +498,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                     <option value="carCostOnly">Custo do Carro por Dia</option>
                     <option value="additionalCostsOnly">Custos Adicionais por Dia</option>
                     <option value="kmDriven">KM Rodados por Dia</option>
+                    <option value="hoursWorked">Horas Trabalhadas por Dia</option> {/* Nova opção */}
                  </select>
             </div>
             <LoadingButton
@@ -517,14 +520,25 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <BarChart data={reportData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                             <XAxis dataKey="date" stroke="#a0aec0" fontSize={12} />
-                            <YAxis stroke="#a0aec0" fontSize={12} tickFormatter={(value: number) => metricsInfo[reportConfig.metric].unit === 'KM' ? `${value} KM` : `R$${value}`} />
+                            <YAxis 
+                                stroke="#a0aec0" 
+                                fontSize={12} 
+                                tickFormatter={(value: number) => {
+                                    const unit = metricsInfo[reportConfig.metric].unit;
+                                    if (unit === 'KM') return `${value} KM`;
+                                    if (unit === 'h') return `${value} h`; // Formatação para horas
+                                    return `R$${value}`;
+                                }} 
+                            />
                             <Tooltip
                                 contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #4a5568', color: '#f9fafb' }}
                                 labelStyle={{ color: '#10b981' }}
-                                formatter={(value: number) => [
-                                    metricsInfo[reportConfig.metric].unit === 'KM' ? `${Number(value).toFixed(1)} KM` : `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`,
-                                    metricsInfo[reportConfig.metric].label
-                                ]}
+                                formatter={(value: number) => {
+                                    const unit = metricsInfo[reportConfig.metric].unit;
+                                    if (unit === 'KM') return [`${Number(value).toFixed(1)} KM`, metricsInfo[reportConfig.metric].label];
+                                    if (unit === 'h') return [`${Number(value).toFixed(1)} h`, metricsInfo[reportConfig.metric].label]; // Formatação para horas
+                                    return [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, metricsInfo[reportConfig.metric].label];
+                                }}
                              />
                             <Bar dataKey="value" fill="#10b981" activeBar={false} />
                         </BarChart>
@@ -541,7 +555,9 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 <p className="font-bold text-white">
                                     {metricsInfo[reportConfig.metric].unit === 'KM' 
                                         ? `${reportTotals.total.toFixed(1)} KM`
-                                        : reportTotals.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                                        : metricsInfo[reportConfig.metric].unit === 'h'
+                                            ? `${reportTotals.total.toFixed(1)} h`
+                                            : reportTotals.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                                     }
                                 </p>
                             </div>
@@ -550,7 +566,9 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 <p className="font-bold text-white">
                                     {metricsInfo[reportConfig.metric].unit === 'KM' 
                                         ? `${reportTotals.average.toFixed(1)} KM`
-                                        : reportTotals.average.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                                        : metricsInfo[reportConfig.metric].unit === 'h'
+                                            ? `${reportTotals.average.toFixed(1)} h`
+                                            : reportTotals.average.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                                     }
                                 </p>
                             </div>
