@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Crown, Zap, BarChart2, Unlock, Loader2, MessageSquare, ArrowLeft, BrainCircuit, CalendarDays, Calculator, FileBarChart2, User, Bot } from 'lucide-react';
+import { Crown, Zap, BarChart2, Unlock, Loader2, MessageSquare, ArrowLeft, BrainCircuit, CalendarDays, Calculator, FileBarChart2, User, Bot } from 'lucide-react'; // Removido Clock
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, Cell } from 'recharts';
 import { RunRecord, AppSettings } from '../types';
 import { analyzeRecords, getChatFollowUp, getIntelligentReportAnalysis } from '../services/geminiService';
@@ -99,13 +99,14 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     const aggregated = sortedRecords.reduce((acc: any, record: RunRecord) => {
       const key = getPeriodKey(record.date, periodType);
       if (!acc[key]) {
-        acc[key] = { key, totalEarnings: 0, totalCosts: 0, kmDriven: 0, daysCount: 0 };
+        acc[key] = { key, totalEarnings: 0, totalCosts: 0, kmDriven: 0, daysCount: 0, totalHoursWorked: 0 }; // Adicionado totalHoursWorked
       }
       const carCost = record.kmDriven * settings.costPerKm;
       acc[key].totalEarnings += record.totalEarnings;
       acc[key].totalCosts += carCost + (record.additionalCosts || 0);
       acc[key].kmDriven += record.kmDriven;
       acc[key].daysCount += 1;
+      acc[key].totalHoursWorked += record.hoursWorked || 0; // Acumula horas trabalhadas
       return acc;
     }, {} as any);
 
@@ -129,8 +130,9 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
         lucroPorKm: item.kmDriven > 0 ? parseFloat((netProfit / item.kmDriven).toFixed(2)) : 0,
         kmRodados: parseFloat(item.kmDriven.toFixed(2)),
         ganhosPorKmBruto: item.kmDriven > 0 ? parseFloat((item.totalEarnings / item.kmDriven).toFixed(2)) : 0,
-        custoPorKm: item.kmDriven > 0 ? parseFloat((item.totalCosts / item.kmDriven).toFixed(2)) : 0,
+        // custoPorKm: item.kmDriven > 0 ? parseFloat((item.totalCosts / item.kmDriven).toFixed(2)) : 0, // Removido
         margemLucro: item.totalEarnings > 0 ? parseFloat(((netProfit / item.totalEarnings) * 100).toFixed(2)) : 0,
+        totalHoursWorked: parseFloat(item.totalHoursWorked.toFixed(1)), // Adicionado
       }
     });
   }, [records, settings, periodType]);
@@ -508,12 +510,13 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
   );
 
   const renderPeriodicTool = () => {
-    const totals = periodicData.reduce((acc: { ganhos: number; custos: number; lucroLiquido: number }, item: any) => {
+    const totals = periodicData.reduce((acc: { ganhos: number; custos: number; lucroLiquido: number; totalHoursWorked: number }, item: any) => {
         acc.ganhos += item.ganhos;
         acc.custos += item.custos;
         acc.lucroLiquido += item.lucroLiquido;
+        acc.totalHoursWorked += item.totalHoursWorked; // Adicionado
         return acc;
-    }, { ganhos: 0, custos: 0, lucroLiquido: 0 });
+    }, { ganhos: 0, custos: 0, lucroLiquido: 0, totalHoursWorked: 0 }); // Adicionado totalHoursWorked
 
     return (
         <div className="animate-fade-in-up">
@@ -540,10 +543,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                 </div>
             ) : (
                 <>
-                <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                <div className="grid grid-cols-4 gap-2 mb-4 text-center"> {/* Ajustado para 4 colunas */}
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-blue-400">Ganhos</p><p className="font-bold text-sm">{totals.ganhos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-yellow-400">Custos</p><p className="font-bold text-sm">{totals.custos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-green-400">Lucro</p><p className="font-bold text-sm">{totals.lucroLiquido.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
+                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-purple-400">Horas</p><p className="font-bold text-sm">{totals.totalHoursWorked.toFixed(1)} h</p></div> {/* Adicionado */}
                 </div>
 
                 <div className="space-y-6">
@@ -617,6 +621,22 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
 
                     {/* Graph 5 */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
+                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Total de Horas Trabalhadas</h3> {/* Novo Título */}
+                        <div className="w-full h-60">
+                           <ResponsiveContainer>
+                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
+                                    <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
+                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value} h`} /> {/* Formatador para horas */}
+                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toFixed(1)} h`} />
+                                    <Bar dataKey="totalHoursWorked" name="Horas" fill="#a855f7" /> {/* dataKey e fill atualizados */}
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Graph 6 (Antigo Graph 7) */}
+                    <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">R$/KM Bruto</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
@@ -631,23 +651,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         </div>
                     </div>
 
-                    {/* Graph 6 */}
-                    <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
-                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Custo por KM</h3>
-                        <div className="w-full h-60">
-                           <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
-                                    <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
-                                    <Bar dataKey="custoPorKm" name="Custo/KM" fill="#f97316" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* Graph 7 */}
+                    {/* Graph 7 (Antigo Graph 8) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Margem de Lucro (%)</h3>
                         <div className="w-full h-60">
