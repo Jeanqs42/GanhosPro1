@@ -57,8 +57,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     totalCosts: { label: 'Custos Totais', unit: 'R$' },
     carCostOnly: { label: 'Custo do Carro', unit: 'R$' },
     additionalCostsOnly: { label: 'Custos Adicionais', unit: 'R$' },
-    kmDriven: { label: 'KM Rodados por Dia', unit: 'KM' },
-    hoursWorked: { label: 'Horas Trabalhadas', unit: 'h' }, // Nova métrica
+    kmDriven: { label: 'KM Rodados', unit: 'KM' }, // Removido 'por Dia'
+    hoursWorked: { label: 'Horas Trabalhadas', unit: 'h' }, // Removido 'por Dia'
   };
 
   useEffect(() => {
@@ -490,15 +490,15 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
             <div>
                  <label htmlFor="metric" className="block text-sm font-medium text-gray-300 mb-1">Métrica</label>
                  <select id="metric" value={reportConfig.metric} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setReportConfig(p => ({...p, metric: e.target.value}))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none" aria-label="Métrica do relatório">
-                    <option value="netProfit">Lucro Líquido por Dia</option>
+                    <option value="netProfit">Lucro Líquido</option>
                     <option value="profitPerKm">Lucro por KM</option>
-                    <option value="grossEarnings">Ganhos Brutos por Dia</option>
+                    <option value="grossEarnings">Ganhos Brutos</option>
                     <option value="grossEarningsPerKm">R$/KM Bruto</option>
-                    <option value="totalCosts">Custos Totais por Dia</option>
-                    <option value="carCostOnly">Custo do Carro por Dia</option>
-                    <option value="additionalCostsOnly">Custos Adicionais por Dia</option>
-                    <option value="kmDriven">KM Rodados por Dia</option>
-                    <option value="hoursWorked">Horas Trabalhadas por Dia</option> {/* Nova opção */}
+                    <option value="totalCosts">Custos Totais</option>
+                    <option value="carCostOnly">Custo do Carro</option>
+                    <option value="additionalCostsOnly">Custos Adicionais</option>
+                    <option value="kmDriven">KM Rodados</option>
+                    <option value="hoursWorked">Horas Trabalhadas</option>
                  </select>
             </div>
             <LoadingButton
