@@ -645,8 +645,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                 <>
                 <div className="grid grid-cols-4 gap-2 mb-4 text-center">
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-gray-400">Ganhos</p><p className="font-bold text-sm text-blue-400">{totals.ganhos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
-                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-gray-400">Custos</p><p className="font-bold text-sm text-brand-accent">{totals.custos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
-                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-gray-400">Lucro</p><p className="font-bold text-sm text-brand-primary">{totals.lucroLiquido.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
+                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-gray-400">Custos</p><p className="font-bold text-sm text-yellow-400">{totals.custos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
+                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-gray-400">Lucro</p><p className="font-bold text-sm text-green-400">{totals.lucroLiquido.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-gray-400">Horas</p><p className="font-bold text-sm text-purple-400">{totals.totalHoursWorked.toFixed(1)} h</p></div>
                 </div>
 
@@ -680,11 +680,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientGanhos" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/>
-                                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.3}/>
+                                            <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.8}/> {/* blue-400 */}
+                                            <stop offset="95%" stopColor="#60a5fa" stopOpacity={0.3}/>
                                         </linearGradient>
                                         <linearGradient id="gradientCustos" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
+                                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/> {/* amber-500 */}
                                             <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.3}/>
                                         </linearGradient>
                                     </defs>
@@ -742,11 +742,10 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, 'Lucro Líquido Acumulado']} 
+                                        formatter={(value: number) => [<span className="text-brand-primary">{Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}</span>, 'Lucro Líquido Acumulado']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/> {/* Adicionado Legend */}
                                     <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" />
-                                    <Area type="monotone" dataKey="lucroLiquido" stroke="#10b981" fillOpacity={1} fill="url(#colorLucro)" name="Lucro Líquido" />
+                                    <Area type="monotone" dataKey="lucroLiquido" stroke="#10b981" fillOpacity={1} fill="url(#colorLucro)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
@@ -759,8 +758,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientLucroKm" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
-                                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/> {/* brand-primary */}
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0.3}/>
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
@@ -769,9 +768,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, 'Lucro/KM']} 
+                                        formatter={(value: number) => [<span className="text-brand-primary">{Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}</span>, 'Lucro/KM']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
                                     <Bar dataKey="lucroPorKm" name="Lucro/KM" fill="url(#gradientLucroKm)" activeBar={false} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -786,8 +784,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientKm" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.8}/>
-                                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.3}/>
+                                            <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.8}/> {/* blue-400 */}
+                                            <stop offset="95%" stopColor="#60a5fa" stopOpacity={0.3}/>
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
@@ -796,9 +794,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toFixed(1)} KM`, 'KM Rodados']} 
+                                        formatter={(value: number) => [<span className="text-brand-primary">{Number(value).toFixed(1)} KM</span>, 'KM Rodados']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
                                     <Bar dataKey="kmRodados" name="KM" fill="url(#gradientKm)" activeBar={false} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -813,8 +810,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientHoras" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#a855f7" stopOpacity={0.8}/>
-                                            <stop offset="95%" stopColor="#a855f7" stopOpacity={0.3}/>
+                                            <stop offset="5%" stopColor="#a78bfa" stopOpacity={0.8}/> {/* purple-400 */}
+                                            <stop offset="95%" stopColor="#a78bfa" stopOpacity={0.3}/>
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
@@ -823,9 +820,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toFixed(1)} h`, 'Horas Trabalhadas']} 
+                                        formatter={(value: number) => [<span className="text-brand-primary">{Number(value).toFixed(1)} h</span>, 'Horas Trabalhadas']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
                                     <Bar dataKey="totalHoursWorked" name="Horas" fill="url(#gradientHoras)" activeBar={false} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -840,8 +836,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientGanhosPorHora" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.8}/> {/* sky-500 */}
-                                            <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0.3}/>
+                                            <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.8}/> {/* blue-400 */}
+                                            <stop offset="95%" stopColor="#60a5fa" stopOpacity={0.3}/>
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
@@ -850,9 +846,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h`, 'Ganhos por Hora']} 
+                                        formatter={(value: number) => [<span className="text-brand-primary">{Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h</span>, 'Ganhos por Hora']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
                                     <Bar dataKey="ganhosPorHora" name="Ganhos/h" fill="url(#gradientGanhosPorHora)" activeBar={false} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -866,9 +861,9 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                            <ResponsiveContainer>
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
-                                        <linearGradient id="gradientLucroLiquidoPorHora" x1="0" y1="0" y2="1">
-                                            <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/> {/* orange-500 */}
-                                            <stop offset="95%" stopColor="#f97316" stopOpacity={0.3}/>
+                                        <linearGradient id="gradientLucroLiquidoPorHora" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/> {/* brand-primary */}
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0.3}/>
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
@@ -877,9 +872,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h`, 'Lucro Líquido por Hora']} 
+                                        formatter={(value: number) => [<span className="text-brand-primary">{Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h</span>, 'Lucro Líquido por Hora']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
                                     <Bar dataKey="lucroLiquidoPorHora" name="Lucro Líquido/h" fill="url(#gradientLucroLiquidoPorHora)" activeBar={false} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -894,8 +888,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientGanhosKmBruto" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-                                            <stop offset="95%" stopColor="#22c55e" stopOpacity={0.3}/>
+                                            <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.8}/> {/* blue-400 */}
+                                            <stop offset="95%" stopColor="#60a5fa" stopOpacity={0.3}/>
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
@@ -904,9 +898,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, 'R$/KM Bruto']} 
+                                        formatter={(value: number) => [<span className="text-brand-primary">{Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}</span>, 'R$/KM Bruto']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
                                     <Bar dataKey="ganhosPorKmBruto" name="R$/KM Bruto" fill="url(#gradientGanhosKmBruto)" activeBar={false} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -921,8 +914,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientMargem" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#e11d48" stopOpacity={0.8}/>
-                                            <stop offset="95%" stopColor="#e11d48" stopOpacity={0.3}/>
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/> {/* brand-primary */}
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0.3}/>
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
@@ -931,9 +924,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toFixed(1)}%`, 'Margem de Lucro']} 
+                                        formatter={(value: number) => [<span className="text-brand-primary">{Number(value).toFixed(1)}%</span>, 'Margem de Lucro']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
                                     <Bar dataKey="margemLucro" name="Margem %" fill="url(#gradientMargem)" activeBar={false} />
                                 </BarChart>
                             </ResponsiveContainer>
