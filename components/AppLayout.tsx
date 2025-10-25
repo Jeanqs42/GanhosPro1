@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
-import { Database, Settings as SettingsIcon, Crown, Home } from 'lucide-react';
-import Dashboard from './Dashboard';
-import History from './History';
-import Settings from './Settings';
-import Premium from './Premium';
+import { Database, Settings as SettingsIcon, Crown, Home, Loader2 } from 'lucide-react'; // Importado Loader2
+// Importações lazy-loaded
+const Dashboard = React.lazy(() => import('./Dashboard'));
+const History = React.lazy(() => import('./History'));
+const Settings = React.lazy(() => import('./Settings'));
+const Premium = React.lazy(() => import('./Premium'));
+
 import { RunRecord, AppSettings } from '../types';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useOfflineSync } from '../hooks/useOfflineSync';
@@ -15,17 +17,13 @@ const AppLayout: React.FC = () => {
     saveRecord: saveRecordOffline, 
     deleteRecord: deleteRecordOffline,
     isInitialized,
-    pendingOperations, // Adicionado para monitorar operações pendentes
+    pendingOperations,
   } = useOfflineSync();
 
-  // O estado 'records' agora será gerenciado internamente pelo AppLayout,
-  // sendo carregado do IndexedDB e atualizado após cada operação.
   const [records, setRecords] = useState<RunRecord[]>([]);
   const [settings, setSettings] = useLocalStorage<AppSettings>('ganhospro_settings', { costPerKm: 0.75 });
   const [isPremium, setIsPremium] = useLocalStorage<boolean>('ganhospro_is_premium', false);
 
-  // Carregar registros do IndexedDB quando o componente montar ou o DB inicializar
-  // E também re-carregar se houver operações pendentes que foram processadas
   useEffect(() => {
     if (isInitialized) {
       const fetchRecords = async () => {
@@ -34,13 +32,11 @@ const AppLayout: React.FC = () => {
       };
       fetchRecords();
     }
-  }, [isInitialized, getAllRecords, pendingOperations.length]); // Adicionado pendingOperations.length como dependência
+  }, [isInitialized, getAllRecords, pendingOperations.length]);
 
-  // Função para adicionar ou atualizar um registro, usando o useOfflineSync
   const addOrUpdateRecord = async (record: RunRecord) => {
     const success = await saveRecordOffline(record);
     if (success) {
-      // Atualiza o estado local do AppLayout após a operação no IndexedDB
       setRecords(prevRecords => {
         const existingIndex = prevRecords.findIndex(r => r.id === record.id);
         if (existingIndex > -1) {
@@ -55,11 +51,9 @@ const AppLayout: React.FC = () => {
     return success;
   };
 
-  // Função para deletar um registro, usando o useOfflineSync
   const deleteRecord = async (id: string) => {
     const success = await deleteRecordOffline(id);
     if (success) {
-      // Atualiza o estado local do AppLayout após a operação no IndexedDB
       setRecords(prevRecords => prevRecords.filter(r => r.id !== id));
     }
     return success;
@@ -67,14 +61,15 @@ const AppLayout: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen font-sans">
-      <main className="flex-grow overflow-y-auto bg-brand-dark p-4 pb-20"> {/* Adicionado pb-20 */}
-        <Routes>
-          {/* Rotas aninhadas sob /app */}
-          <Route path="/" element={<Dashboard records={records} settings={settings} addOrUpdateRecord={addOrUpdateRecord} deleteRecord={deleteRecord} isPremium={isPremium} />} />
-          <Route path="/history" element={<History records={records} deleteRecord={deleteRecord} settings={settings} />} />
-          <Route path="/settings" element={<Settings settings={settings} setSettings={setSettings} isPremium={isPremium} />} />
-          <Route path="/premium" element={<Premium records={records} settings={settings} isPremium={isPremium} setIsPremium={setIsPremium} />} />
-        </Routes>
+      <main className="flex-grow overflow-y-auto bg-brand-dark p-4 pb-20">
+        <Suspense fallback={<div className="text-center text-gray-400 mt-10"><Loader2 className="animate-spin mx-auto w-8 h-8 text-brand-primary" /><p className="mt-2">Carregando...</p></div>}>
+          <Routes>
+            <Route path="/" element={<Dashboard records={records} settings={settings} addOrUpdateRecord={addOrUpdateRecord} deleteRecord={deleteRecord} isPremium={isPremium} />} />
+            <Route path="/history" element={<History records={records} deleteRecord={deleteRecord} settings={settings} />} />
+            <Route path="/settings" element={<Settings settings={settings} setSettings={setSettings} isPremium={isPremium} />} />
+            <Route path="/premium" element={<Premium records={records} settings={settings} isPremium={isPremium} setIsPremium={setIsPremium} />} />
+          </Routes>
+        </Suspense>
       </main>
       <footer className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 shadow-lg">
         <nav className="flex justify-around items-center h-16">
