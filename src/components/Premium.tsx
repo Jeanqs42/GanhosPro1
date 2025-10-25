@@ -647,7 +647,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-gray-400">Ganhos</p><p className="font-bold text-sm text-blue-400">{totals.ganhos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-gray-400">Custos</p><p className="font-bold text-sm text-brand-accent">{totals.custos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-gray-400">Lucro</p><p className="font-bold text-sm text-brand-primary">{totals.lucroLiquido.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
-                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-gray-400">Horas</p><p className="font-bold text-sm text-purple-400">{totals.totalHoursWorked.toFixed(1)} h</p></div>
+                    <div className="bg-gray-800 p-2 rounded-lg"><p className="font-bold text-sm text-purple-400">{totals.totalHoursWorked.toFixed(1)} h</p></div>
                 </div>
 
                 {/* Novo: Resumo de Comparação de Períodos */}
@@ -694,10 +694,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number, name: string) => {
-                                            const colorClass = name === 'ganhos' ? 'text-brand-primary' : 'text-brand-accent';
-                                            return [<span className={colorClass}>{Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}</span>, name === 'ganhos' ? 'Ganhos' : 'Custos'];
-                                        }} 
+                                        formatter={(value: number, name: string) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, name === 'ganhos' ? 'Ganhos' : 'Custos']} 
                                     />
                                     <Legend wrapperStyle={{fontSize: "12px"}}/>
                                     <Bar dataKey="ganhos" fill="url(#gradientGanhos)" name="Ganhos" activeBar={false} />
@@ -799,7 +796,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [<span className="text-blue-400">{Number(value).toFixed(1)} KM</span>, 'KM Rodados']} 
+                                        formatter={(value: number) => [<span className="text-brand-primary">{Number(value).toFixed(1)} KM</span>, 'KM Rodados']} 
                                     />
                                     <Legend wrapperStyle={{fontSize: "12px"}}/>
                                     <Bar dataKey="kmRodados" name="KM" fill="url(#gradientKm)" activeBar={false} />
@@ -826,7 +823,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [<span className="text-purple-400">{Number(value).toFixed(1)} h</span>, 'Horas Trabalhadas']} 
+                                        formatter={(value: number) => [<span className="text-brand-primary">{Number(value).toFixed(1)} h</span>, 'Horas Trabalhadas']} 
                                     />
                                     <Legend wrapperStyle={{fontSize: "12px"}}/>
                                     <Bar dataKey="totalHoursWorked" name="Horas" fill="url(#gradientHoras)" activeBar={false} />
@@ -869,7 +866,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                            <ResponsiveContainer>
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
-                                        <linearGradient id="gradientLucroLiquidoPorHora" x1="0" y1="0" y2="1">
+                                        <linearGradient id="gradientLucroLiquidoPorHora" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/> {/* brand-primary */}
                                             <stop offset="95%" stopColor="#10b981" stopOpacity={0.3}/>
                                         </linearGradient>
