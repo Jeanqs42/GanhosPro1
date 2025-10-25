@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { RunRecord, AppSettings } from '../types';
-import { Trash2, Calendar, Route, FileDown, FileText, Loader2 } from 'lucide-react';
+import { Trash2, Calendar, Route, FileDown, FileText, Loader2, Clock } from 'lucide-react'; // Importar Clock
 import { exportCSV, exportPDF } from '../utils/export';
 // import { useOfflineSync } from '../hooks/useOfflineSync'; // Removido: Não é mais necessário para status visual
 
@@ -101,7 +101,6 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
   };
 
   const totalEarnings = useMemo(() => records.reduce((sum: number, r: RunRecord) => sum + r.totalEarnings, 0), [records]);
-  // const totalKm = useMemo(() => records.reduce((sum: number, r: RunRecord) => sum + r.kmDriven, 0), [records]); // Removido
   const totalNetProfit = useMemo(() => {
     return records.reduce((sum: number, r: RunRecord) => {
       const carCost = r.kmDriven * settings.costPerKm;
@@ -208,9 +207,16 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
                     <Calendar size={24} className="text-gray-400 flex-shrink-0" />
                     <div>
                         <p className="font-bold text-lg text-white">{new Date(record.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</p>
-                        <p className="flex items-center text-sm text-gray-400">
-                            <Route size={14} className="mr-1.5" /> {record.kmDriven.toFixed(1)} km
-                        </p>
+                        <div className="flex items-center gap-3 mt-1"> {/* Flex container para KM e Horas */}
+                            <p className="flex items-center text-sm text-gray-400">
+                                <Route size={14} className="mr-1.5" /> {record.kmDriven.toFixed(1)} km
+                            </p>
+                            {record.hoursWorked !== undefined && record.hoursWorked > 0 && (
+                                <p className="flex items-center text-sm text-gray-400">
+                                    <Clock size={14} className="mr-1.5" /> {record.hoursWorked.toFixed(1)} h
+                                </p>
+                            )}
+                        </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-4">
