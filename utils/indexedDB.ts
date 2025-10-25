@@ -27,13 +27,13 @@ class IndexedDBManager {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => { // 'reject' renomeado para '_reject'
         const request = indexedDB.open(DB_NAME, DB_VERSION);
 
         request.onerror = () => {
           console.error('Erro ao abrir IndexedDB:', request.error);
           this.isSupported = false;
-          reject(new Error('Erro ao abrir IndexedDB')); // Rejeita a promessa
+          resolve(false);
         };
 
         request.onsuccess = () => {
@@ -76,7 +76,7 @@ class IndexedDBManager {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => { // 'reject' renomeado para '_reject'
         const transaction = this.db!.transaction([RECORDS_STORE], 'readwrite');
         const store = transaction.objectStore(RECORDS_STORE);
         const request = store.put(record);
@@ -88,7 +88,7 @@ class IndexedDBManager {
 
         request.onerror = () => {
           console.error('Erro ao salvar registro:', request.error);
-          reject(new Error('Erro ao salvar registro')); // Rejeita a promessa
+          resolve(false);
         };
       });
     } catch (error) {
@@ -103,7 +103,7 @@ class IndexedDBManager {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => { // 'reject' renomeado para '_reject'
         const transaction = this.db!.transaction([RECORDS_STORE], 'readonly');
         const store = transaction.objectStore(RECORDS_STORE);
         const request = store.getAll();
@@ -114,7 +114,7 @@ class IndexedDBManager {
 
         request.onerror = () => {
           console.error('Erro ao buscar registros:', request.error);
-          reject(new Error('Erro ao buscar registros')); // Rejeita a promessa
+          resolve(this.fallbackGetAllRecords());
         };
       });
     } catch (error) {
@@ -129,7 +129,7 @@ class IndexedDBManager {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => { // 'reject' renomeado para '_reject'
         const transaction = this.db!.transaction([RECORDS_STORE], 'readwrite');
         const store = transaction.objectStore(RECORDS_STORE);
         const request = store.delete(id);
@@ -141,7 +141,7 @@ class IndexedDBManager {
 
         request.onerror = () => {
           console.error('Erro ao deletar registro:', request.error);
-          reject(new Error('Erro ao deletar registro')); // Rejeita a promessa
+          resolve(false);
         };
       });
     } catch (error) {
@@ -157,7 +157,7 @@ class IndexedDBManager {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => { // 'reject' renomeado para '_reject'
         const transaction = this.db!.transaction([SETTINGS_STORE], 'readwrite');
         const store = transaction.objectStore(SETTINGS_STORE);
         const request = store.put({ key: 'app_settings', ...settings });
@@ -165,7 +165,7 @@ class IndexedDBManager {
         request.onsuccess = () => resolve(true);
         request.onerror = () => {
           console.error('Erro ao salvar configurações:', request.error);
-          reject(new Error('Erro ao salvar configurações')); // Rejeita a promessa
+          resolve(false);
         };
       });
     } catch (error) {
@@ -180,7 +180,7 @@ class IndexedDBManager {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => { // 'reject' renomeado para '_reject'
         const transaction = this.db!.transaction([SETTINGS_STORE], 'readonly');
         const store = transaction.objectStore(SETTINGS_STORE);
         const request = store.get('app_settings');
@@ -197,7 +197,7 @@ class IndexedDBManager {
 
         request.onerror = () => {
           console.error('Erro ao buscar configurações:', request.error);
-          reject(new Error('Erro ao buscar configurações')); // Rejeita a promessa
+          resolve(this.fallbackGetSettings());
         };
       });
     } catch (error) {
@@ -235,7 +235,7 @@ class IndexedDBManager {
       const request = store.count();
 
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => resolve(0); // Não rejeita, apenas retorna 0
+      request.onerror = () => resolve(0);
     });
   }
 
@@ -310,7 +310,7 @@ class IndexedDBManager {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         const transaction = this.db!.transaction([RECORDS_STORE, SETTINGS_STORE, METADATA_STORE], 'readwrite');
         
         transaction.objectStore(RECORDS_STORE).clear();
@@ -318,10 +318,7 @@ class IndexedDBManager {
         transaction.objectStore(METADATA_STORE).clear();
 
         transaction.oncomplete = () => resolve(true);
-        transaction.onerror = () => {
-          console.error('Erro ao limpar dados:', transaction.error);
-          reject(new Error('Erro ao limpar dados')); // Rejeita a promessa
-        };
+        transaction.onerror = () => resolve(false);
       });
     } catch (error) {
       console.error('Erro ao limpar dados:', error);
@@ -337,7 +334,7 @@ class IndexedDBManager {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         const transaction = this.db!.transaction([METADATA_STORE], 'readonly');
         const store = transaction.objectStore(METADATA_STORE);
         const request = store.get('app_metadata');
@@ -352,12 +349,10 @@ class IndexedDBManager {
         };
 
         request.onerror = () => {
-          console.error('Erro ao buscar metadados de armazenamento:', request.error);
-          reject(new Error('Erro ao buscar metadados de armazenamento')); // Rejeita a promessa
+          resolve({ supported: true, recordCount });
         };
       });
     } catch (error) {
-      console.error('Erro ao buscar metadados de armazenamento:', error);
       return { supported: true, recordCount };
     }
   }
