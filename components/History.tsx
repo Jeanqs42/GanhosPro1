@@ -101,13 +101,22 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
   };
 
   const totalEarnings = useMemo(() => records.reduce((sum: number, r: RunRecord) => sum + r.totalEarnings, 0), [records]);
-  const totalKm = useMemo(() => records.reduce((sum: number, r: RunRecord) => sum + r.kmDriven, 0), [records]);
+  // const totalKm = useMemo(() => records.reduce((sum: number, r: RunRecord) => sum + r.kmDriven, 0), [records]); // Removido
   const totalNetProfit = useMemo(() => {
     return records.reduce((sum: number, r: RunRecord) => {
       const carCost = r.kmDriven * settings.costPerKm;
       const additionalCosts = r.additionalCosts || 0;
       const netProfit = r.totalEarnings - additionalCosts - carCost;
       return sum + netProfit;
+    }, 0);
+  }, [records, settings.costPerKm]);
+
+  // Novo cálculo para Custos Totais
+  const totalCosts = useMemo(() => {
+    return records.reduce((sum: number, r: RunRecord) => {
+      const carCost = r.kmDriven * settings.costPerKm;
+      const additionalCosts = r.additionalCosts || 0;
+      return sum + carCost + additionalCosts;
     }, 0);
   }, [records, settings.costPerKm]);
 
@@ -165,18 +174,21 @@ const History: React.FC<HistoryProps> = ({ records, deleteRecord, settings }) =>
 
       {/* Removido o bloco de status de conectividade */}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-gray-800 p-4 rounded-lg text-center">
-            <p className="text-sm text-gray-400">Lucro Líquido Total</p>
-            <p className={`text-2xl font-bold ${totalNetProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{totalNetProfit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-        </div>
+      {/* Lucro Líquido Total - Destacado */}
+      <div className="bg-gray-800 p-5 rounded-lg shadow-md text-center mb-4">
+          <p className="text-base text-gray-400">Lucro Líquido Total</p>
+          <p className={`text-3xl font-bold ${totalNetProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{totalNetProfit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+      </div>
+
+      {/* Ganhos Totais e Custos Totais - Lado a lado */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-gray-800 p-4 rounded-lg text-center">
             <p className="text-sm text-gray-400">Ganhos Totais</p>
             <p className="text-2xl font-bold text-brand-primary">{totalEarnings.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
         </div>
         <div className="bg-gray-800 p-4 rounded-lg text-center">
-            <p className="text-sm text-gray-400">KM Rodados Totais</p>
-            <p className="text-2xl font-bold text-yellow-400">{totalKm.toFixed(1)} km</p>
+            <p className="text-sm text-gray-400">Custos Totais</p>
+            <p className="text-2xl font-bold text-yellow-400">{totalCosts.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
         </div>
       </div>
       
