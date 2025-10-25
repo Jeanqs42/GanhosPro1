@@ -328,7 +328,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, settings, addOrUpdateRec
 
     const renderResultView = (isDetails: boolean) => (
         <div className="bg-gray-800 p-6 rounded-lg shadow-xl animate-fade-in-up mb-4">
-            <h2 className="text-xl font-semibold text-center mb-4">
+            <h2 className="text-xl font-semibold text-center mb-4 text-white"> {/* Adicionado text-white aqui */}
                 {isDetails ? `Detalhes de ${new Date(date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}` : 'Resumo do Dia'}
             </h2>
             <div className="grid grid-cols-2 gap-4">
