@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Crown, Zap, BarChart2, Unlock, Loader2, MessageSquare, ArrowLeft, BrainCircuit, CalendarDays, Calculator, FileBarChart2, User, Bot } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, AreaChart, Area, ReferenceLine } from 'recharts'; // Removido Rectangle, pois não é mais necessário para o background
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, AreaChart, Area, ReferenceLine } from 'recharts';
 import { RunRecord, AppSettings } from '../types';
 import { analyzeRecords, getChatFollowUp, getIntelligentReportAnalysis } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
@@ -119,6 +119,9 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
 
     const result = Object.values(aggregated).map((item: any) => {
       const netProfit = item.totalEarnings - item.totalCosts;
+      const ganhosPorHora = item.totalHoursWorked > 0 ? parseFloat((item.totalEarnings / item.totalHoursWorked).toFixed(2)) : 0;
+      const lucroLiquidoPorHora = item.totalHoursWorked > 0 ? parseFloat((netProfit / item.totalHoursWorked).toFixed(2)) : 0;
+
       return {
         name: formatPeriodLabel(item.key, periodType),
         key: item.key,
@@ -130,6 +133,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
         ganhosPorKmBruto: item.kmDriven > 0 ? parseFloat((item.totalEarnings / item.kmDriven).toFixed(2)) : 0,
         margemLucro: item.totalEarnings > 0 ? parseFloat(((netProfit / item.totalEarnings) * 100).toFixed(2)) : 0,
         totalHoursWorked: parseFloat(item.totalHoursWorked.toFixed(1)),
+        ganhosPorHora,
+        lucroLiquidoPorHora,
       }
     });
     
@@ -521,7 +526,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     metricsInfo[reportConfig.metric].label
                                 ]}
                              />
-                            <Bar dataKey="value" fill="#10b981" activeBar={false} /> {/* Adicionado activeBar={false} aqui */}
+                            <Bar dataKey="value" fill="#10b981" activeBar={false} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
@@ -572,14 +577,43 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
      </div>
   );
 
+  // Helper para calcular a mudança percentual
+  const calculateChange = (current: number, previous: number): string => {
+    if (previous === 0) {
+      return current > 0 ? '+∞%' : 'N/A'; // Aumento infinito se o anterior era 0 e o atual é positivo
+    }
+    const change = ((current - previous) / previous) * 100;
+    if (change > 0) return `+${change.toFixed(1)}%`;
+    if (change < 0) return `${change.toFixed(1)}%`;
+    return '0%';
+  };
+
   const renderPeriodicTool = () => {
-    const totals = periodicData.reduce((acc: { ganhos: number; custos: number; lucroLiquido: number; totalHoursWorked: number }, item: any) => {
+    const totals = periodicData.reduce((acc: { ganhos: number; custos: number; lucroLiquido: number; kmRodados: number; totalHoursWorked: number; ganhosPorHora: number; lucroLiquidoPorHora: number }, item: any) => {
         acc.ganhos += item.ganhos;
         acc.custos += item.custos;
         acc.lucroLiquido += item.lucroLiquido;
+        acc.kmRodados += item.kmRodados;
         acc.totalHoursWorked += item.totalHoursWorked;
+        // Para ganhosPorHora e lucroLiquidoPorHora, a média é mais relevante para o total
+        // Mas para o resumo, vamos somar e depois calcular a média se necessário, ou usar os valores já calculados por período.
+        // Por enquanto, para o resumo geral, manteremos a soma dos totais e calcularemos a média no display se for o caso.
         return acc;
-    }, { ganhos: 0, custos: 0, lucroLiquido: 0, totalHoursWorked: 0 });
+    }, { ganhos: 0, custos: 0, lucroLiquido: 0, kmRodados: 0, totalHoursWorked: 0, ganhosPorHora: 0, lucroLiquidoPorHora: 0 });
+
+    // Comparação de Períodos
+    const lastPeriodData = periodicData.length > 0 ? periodicData[periodicData.length - 1] : null;
+    const previousPeriodData = periodicData.length > 1 ? periodicData[periodicData.length - 2] : null;
+
+    const comparisonMetrics = [
+      { label: 'Lucro Líquido', current: lastPeriodData?.lucroLiquido, previous: previousPeriodData?.lucroLiquido, unit: 'R$' },
+      { label: 'Ganhos Brutos', current: lastPeriodData?.ganhos, previous: previousPeriodData?.ganhos, unit: 'R$' },
+      { label: 'Custos Totais', current: lastPeriodData?.custos, previous: previousPeriodData?.custos, unit: 'R$' },
+      { label: 'KM Rodados', current: lastPeriodData?.kmRodados, previous: previousPeriodData?.kmRodados, unit: 'KM' },
+      { label: 'Horas Trabalhadas', current: lastPeriodData?.totalHoursWorked, previous: previousPeriodData?.totalHoursWorked, unit: 'h' },
+      { label: 'Ganhos por Hora', current: lastPeriodData?.ganhosPorHora, previous: previousPeriodData?.ganhosPorHora, unit: 'R$/h' },
+      { label: 'Lucro por Hora', current: lastPeriodData?.lucroLiquidoPorHora, previous: previousPeriodData?.lucroLiquidoPorHora, unit: 'R$/h' },
+    ];
 
     return (
         <div className="animate-fade-in-up">
@@ -612,6 +646,27 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-green-400">Lucro</p><p className="font-bold text-sm">{totals.lucroLiquido.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-purple-400">Horas</p><p className="font-bold text-sm">{totals.totalHoursWorked.toFixed(1)} h</p></div>
                 </div>
+
+                {/* Novo: Resumo de Comparação de Períodos */}
+                {previousPeriodData && lastPeriodData && (
+                  <div className="bg-gray-800 p-4 rounded-lg shadow-xl mb-6 animate-fade-in-up">
+                    <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">
+                      Comparação: {lastPeriodData.name} vs {previousPeriodData.name}
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 text-center">
+                      {comparisonMetrics.map((metric, index) => (
+                        <div key={index} className="bg-gray-700/50 p-2 rounded-lg">
+                          <p className="text-xs text-gray-400 mb-1">{metric.label}</p>
+                          <p className={`font-bold text-sm ${
+                            (metric.current || 0) >= (metric.previous || 0) ? 'text-green-400' : 'text-red-400'
+                          }`}>
+                            {calculateChange(metric.current || 0, metric.previous || 0)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-6">
                     {/* Graph 1: Ganhos Brutos vs. Custos Totais */}
@@ -750,14 +805,58 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         </div>
                     </div>
 
-                    {/* Graph 6: R$/KM Bruto */}
+                    {/* Graph 6: Ganhos por Hora */}
+                    <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
+                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Ganhos por Hora (R$/h)</h3>
+                        <div className="w-full h-60">
+                           <ResponsiveContainer>
+                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                    <defs>
+                                        <linearGradient id="gradientGanhosPorHora" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.8}/> {/* sky-500 */}
+                                            <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0.3}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
+                                    <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
+                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `R$${value}`} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                    <Bar dataKey="ganhosPorHora" name="Ganhos/h" fill="url(#gradientGanhosPorHora)" activeBar={false} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Graph 7: Lucro Líquido por Hora */}
+                    <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
+                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Lucro Líquido por Hora (R$/h)</h3>
+                        <div className="w-full h-60">
+                           <ResponsiveContainer>
+                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                    <defs>
+                                        <linearGradient id="gradientLucroLiquidoPorHora" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/> {/* orange-500 */}
+                                            <stop offset="95%" stopColor="#f97316" stopOpacity={0.3}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
+                                    <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
+                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `R$${value}`} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                    <Bar dataKey="lucroLiquidoPorHora" name="Lucro Líquido/h" fill="url(#gradientLucroLiquidoPorHora)" activeBar={false} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Graph 8: R$/KM Bruto (antigo 6) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">R$/KM Bruto</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
-                                        <linearGradient id="gradientGanhosKmBruto" x1="0" y1="0" y2="1">
+                                        <linearGradient id="gradientGanhosKmBruto" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
                                             <stop offset="95%" stopColor="#22c55e" stopOpacity={0.3}/>
                                         </linearGradient>
@@ -772,7 +871,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         </div>
                     </div>
 
-                    {/* Graph 7: Margem de Lucro (%) */}
+                    {/* Graph 9: Margem de Lucro (%) (antigo 7) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Margem de Lucro (%)</h3>
                         <div className="w-full h-60">
