@@ -521,7 +521,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     metricsInfo[reportConfig.metric].label
                                 ]}
                              />
-                            <Bar dataKey="value" fill="#10b981" activeBar={false} /> {/* Adicionado activeBar={false} aqui */}
+                            <Bar dataKey="value" fill="#10b981" />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
@@ -757,7 +757,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                            <ResponsiveContainer>
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
-                                        <linearGradient id="gradientGanhosKmBruto" x1="0" y1="0" y2="1">
+                                        <linearGradient id="gradientGanhosKmBruto" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
                                             <stop offset="95%" stopColor="#22c55e" stopOpacity={0.3}/>
                                         </linearGradient>
