@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Crown, Zap, BarChart2, Unlock, Loader2, MessageSquare, ArrowLeft, BrainCircuit, CalendarDays, Calculator, FileBarChart2, User, Bot } from 'lucide-react'; // Removido Clock
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, Cell } from 'recharts';
+import { Crown, Zap, BarChart2, Unlock, Loader2, MessageSquare, ArrowLeft, BrainCircuit, CalendarDays, Calculator, FileBarChart2, User, Bot } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, AreaChart, Area, ReferenceLine } from 'recharts'; // 'Cell' removido
 import { RunRecord, AppSettings } from '../types';
 import { analyzeRecords, getChatFollowUp, getIntelligentReportAnalysis } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown'; // Importar ReactMarkdown
@@ -568,22 +568,29 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                             </ResponsiveContainer>
                         </div>
                     </div>
-                     {/* Graph 2 */}
+                     {/* Graph 2: Evolução do Lucro Líquido (AreaChart) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Evolução do Lucro Líquido</h3>
                         <div className="w-full h-60">
                             <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                    <defs>
+                                        <linearGradient id="colorLucro" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                        </linearGradient>
+                                        <linearGradient id="colorPrejuizo" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} />
+                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
                                     <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
-                                    <Bar dataKey="lucroLiquido" name="Lucro Líquido">
-                                        {periodicData.map((entry: any, index: number) => (
-                                            <Cell key={`cell-${index}`} fill={entry.lucroLiquido >= 0 ? '#10b981' : '#ef4444'} />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
+                                    <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" /> {/* Linha de referência para o zero */}
+                                    <Area type="monotone" dataKey="lucroLiquido" stroke="#10b981" fillOpacity={1} fill="url(#colorLucro)" />
+                                </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
