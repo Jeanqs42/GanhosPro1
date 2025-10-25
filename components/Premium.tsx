@@ -47,7 +47,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     metric: 'netProfit'
   });
   const [periodType, setPeriodType] = useState<PeriodType>('monthly');
-  const [selectedPeriodKey, setSelectedPeriodKey] = useState<string | null>(null); // Novo estado para o período selecionado
+  const [selectedPeriodKey, setSelectedPeriodKey] = useState<string | null>(null);
 
   const metricsInfo: { [key: string]: { label: string; unit: string } } = {
     netProfit: { label: 'Lucro Líquido', unit: 'R$' },
@@ -121,7 +121,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       const netProfit = item.totalEarnings - item.totalCosts;
       return {
         name: formatPeriodLabel(item.key, periodType),
-        key: item.key, // Manter a chave para seleção
+        key: item.key,
         ganhos: parseFloat(item.totalEarnings.toFixed(2)),
         custos: parseFloat(item.totalCosts.toFixed(2)),
         lucroLiquido: parseFloat(netProfit.toFixed(2)),
@@ -133,18 +133,15 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       }
     });
     
-    // Ordenar por chave para garantir que o último período seja o último no array
     result.sort((a: any, b: any) => a.key.localeCompare(b.key));
 
-    // Definir o período selecionado como o mais recente se ainda não estiver definido
     if (!selectedPeriodKey && result.length > 0) {
       setSelectedPeriodKey(result[result.length - 1].key);
     }
 
     return result;
-  }, [records, settings, periodType, selectedPeriodKey]); // Adicionado selectedPeriodKey como dependência
+  }, [records, settings, periodType, selectedPeriodKey]);
 
-  // Dados detalhados para o gráfico de Evolução do Lucro Líquido
   const detailedPeriodicData = useMemo(() => {
     if (!selectedPeriodKey) return [];
 
@@ -154,7 +151,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     const dailyDataMap = new Map<string, { date: string; lucroLiquido: number }>();
     let cumulativeProfit = 0;
 
-    // Preencher com todos os dias/meses do período para garantir continuidade
     const startDate = new Date(selectedPeriodKey.includes('W') ? selectedPeriodKey.substring(1) : selectedPeriodKey);
     let endDate = new Date(startDate);
 
@@ -162,11 +158,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       endDate.setDate(startDate.getDate() + 6);
     } else if (periodType === 'monthly') {
       endDate.setMonth(startDate.getMonth() + 1);
-      endDate.setDate(0); // Último dia do mês
-    } else { // annual
+      endDate.setDate(0);
+    } else {
       endDate.setFullYear(startDate.getFullYear() + 1);
-      endDate.setDate(0); // Último dia do ano
-      endDate.setMonth(11); // Dezembro
+      endDate.setDate(0);
+      endDate.setMonth(11);
     }
 
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -200,13 +196,12 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
   }, [records, settings, periodType, selectedPeriodKey]);
 
   useEffect(() => {
-    // Atualizar selectedPeriodKey quando o tipo de período mudar
     if (periodicData.length > 0) {
       setSelectedPeriodKey(periodicData[periodicData.length - 1].key);
     } else {
       setSelectedPeriodKey(null);
     }
-  }, [periodType, periodicData.length]); // Depende de periodicData.length para reagir a mudanças nos dados
+  }, [periodType, periodicData.length]);
 
   const handleAnalyze = async () => {
     if (records.length < 3) {
@@ -625,13 +620,23 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <div className="w-full h-60">
                             <ResponsiveContainer>
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                    <defs>
+                                        <linearGradient id="gradientGanhos" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.3}/>
+                                        </linearGradient>
+                                        <linearGradient id="gradientCustos" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                                        </linearGradient>
+                                    </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} />
+                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
                                     <Legend wrapperStyle={{fontSize: "12px"}}/>
-                                    <Bar dataKey="ganhos" fill="#2563eb" name="Ganhos" />
-                                    <Bar dataKey="custos" fill="#f59e0b" name="Custos" />
+                                    <Bar dataKey="ganhos" fill="url(#gradientGanhos)" name="Ganhos" />
+                                    <Bar dataKey="custos" fill="url(#gradientCustos)" name="Custos" />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -685,11 +690,17 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <div className="w-full h-60">
                            <ResponsiveContainer>
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                    <defs>
+                                        <linearGradient id="gradientLucroKm" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                                        </linearGradient>
+                                    </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} />
+                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
                                     <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
-                                    <Bar dataKey="lucroPorKm" name="Lucro/KM" fill="#8b5cf6" />
+                                    <Bar dataKey="lucroPorKm" name="Lucro/KM" fill="url(#gradientLucroKm)" />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -701,11 +712,17 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <div className="w-full h-60">
                            <ResponsiveContainer>
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                    <defs>
+                                        <linearGradient id="gradientKm" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.3}/>
+                                        </linearGradient>
+                                    </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} />
+                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value} KM`} />
                                     <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toFixed(1)} KM`} />
-                                    <Bar dataKey="kmRodados" name="KM" fill="#06b6d4" />
+                                    <Bar dataKey="kmRodados" name="KM" fill="url(#gradientKm)" />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -717,11 +734,17 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <div className="w-full h-60">
                            <ResponsiveContainer>
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                    <defs>
+                                        <linearGradient id="gradientHoras" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#a855f7" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="#a855f7" stopOpacity={0.3}/>
+                                        </linearGradient>
+                                    </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value} h`} />
                                     <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toFixed(1)} h`} />
-                                    <Bar dataKey="totalHoursWorked" name="Horas" fill="#a855f7" />
+                                    <Bar dataKey="totalHoursWorked" name="Horas" fill="url(#gradientHoras)" />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -733,11 +756,17 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <div className="w-full h-60">
                            <ResponsiveContainer>
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                    <defs>
+                                        <linearGradient id="gradientGanhosKmBruto" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="#22c55e" stopOpacity={0.3}/>
+                                        </linearGradient>
+                                    </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} />
+                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
                                     <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
-                                    <Bar dataKey="ganhosPorKmBruto" name="R$/KM Bruto" fill="#22c55e" />
+                                    <Bar dataKey="ganhosPorKmBruto" name="R$/KM Bruto" fill="url(#gradientGanhosKmBruto)" />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -749,11 +778,17 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <div className="w-full h-60">
                            <ResponsiveContainer>
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                    <defs>
+                                        <linearGradient id="gradientMargem" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#e11d48" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="#e11d48" stopOpacity={0.3}/>
+                                        </linearGradient>
+                                    </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value}%`} />
                                     <Tooltip contentStyle={{ backgroundColor: '#1f2937' }} formatter={(value: number) => `${Number(value).toFixed(1)}%`} />
-                                    <Bar dataKey="margemLucro" name="Margem %" fill="#e11d48" />
+                                    <Bar dataKey="margemLucro" name="Margem %" fill="url(#gradientMargem)" />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
