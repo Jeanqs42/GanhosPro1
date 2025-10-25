@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Crown, Zap, BarChart2, Unlock, Loader2, MessageSquare, ArrowLeft, BrainCircuit, CalendarDays, Calculator, FileBarChart2, User, Bot } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, AreaChart, Area, ReferenceLine } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, AreaChart, Area, ReferenceLine } from 'recharts'; // Removido Rectangle, pois não é mais necessário para o background
 import { RunRecord, AppSettings } from '../types';
 import { analyzeRecords, getChatFollowUp, getIntelligentReportAnalysis } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
@@ -509,7 +509,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                 <h3 className="font-bold text-lg mb-4 text-brand-primary text-center">Resultado do Relatório</h3>
                 <div className="w-full h-64">
                     <ResponsiveContainer>
-                        <BarChart data={reportData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                        <BarChart data={reportData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}> {/* 'background' prop removida */}
                             <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                             <XAxis dataKey="date" stroke="#a0aec0" fontSize={12} />
                             <YAxis stroke="#a0aec0" fontSize={12} tickFormatter={(value: number) => metricsInfo[reportConfig.metric].unit === 'KM' ? `${value} KM` : `R$${value}`} />
@@ -619,7 +619,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Ganhos Brutos vs. Custos Totais</h3>
                         <div className="w-full h-60">
                             <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}> {/* 'background' prop removida */}
                                     <defs>
                                         <linearGradient id="gradientGanhos" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/>
@@ -663,7 +663,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         )}
                         <div className="w-full h-60">
                             <ResponsiveContainer>
-                                <AreaChart data={detailedPeriodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <AreaChart data={detailedPeriodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}> {/* 'background' prop removida */}
                                     <defs>
                                         <linearGradient id="colorLucro" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
@@ -689,7 +689,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Desempenho de Lucro por KM (R$)</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}> {/* 'background' prop removida */}
                                     <defs>
                                         <linearGradient id="gradientLucroKm" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
@@ -711,7 +711,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">KM Rodados</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}> {/* 'background' prop removida */}
                                     <defs>
                                         <linearGradient id="gradientKm" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.8}/>
@@ -733,7 +733,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Total de Horas Trabalhadas</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}> {/* 'background' prop removida */}
                                     <defs>
                                         <linearGradient id="gradientHoras" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#a855f7" stopOpacity={0.8}/>
@@ -755,7 +755,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">R$/KM Bruto</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}> {/* 'background' prop removida */}
                                     <defs>
                                         <linearGradient id="gradientGanhosKmBruto" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
@@ -777,7 +777,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Margem de Lucro (%)</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}> {/* 'background' prop removida */}
                                     <defs>
                                         <linearGradient id="gradientMargem" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#e11d48" stopOpacity={0.8}/>
