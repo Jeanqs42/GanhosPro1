@@ -57,7 +57,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     totalCosts: { label: 'Custos Totais', unit: 'R$' },
     carCostOnly: { label: 'Custo do Carro', unit: 'R$' },
     additionalCostsOnly: { label: 'Custos Adicionais', unit: 'R$' },
-    kmDriven: { label: 'KM Rodados por Dia', unit: 'KM' },
+    kmDriven: { label: 'KM Rodados', unit: 'KM' },
+    hoursWorked: { label: 'Horas Trabalhadas', unit: 'h' },
   };
 
   useEffect(() => {
@@ -298,6 +299,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
         case 'carCostOnly': value = carCost; break;
         case 'additionalCostsOnly': value = additionalCosts; break;
         case 'kmDriven': value = r.kmDriven; break;
+        case 'hoursWorked': value = r.hoursWorked || 0; break;
         default: value = netProfit;
       }
       return {
@@ -488,14 +490,15 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
             <div>
                  <label htmlFor="metric" className="block text-sm font-medium text-gray-300 mb-1">Métrica</label>
                  <select id="metric" value={reportConfig.metric} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setReportConfig(p => ({...p, metric: e.target.value}))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none" aria-label="Métrica do relatório">
-                    <option value="netProfit">Lucro Líquido por Dia</option>
+                    <option value="netProfit">Lucro Líquido</option>
                     <option value="profitPerKm">Lucro por KM</option>
-                    <option value="grossEarnings">Ganhos Brutos por Dia</option>
+                    <option value="grossEarnings">Ganhos Brutos</option>
                     <option value="grossEarningsPerKm">R$/KM Bruto</option>
-                    <option value="totalCosts">Custos Totais por Dia</option>
-                    <option value="carCostOnly">Custo do Carro por Dia</option>
-                    <option value="additionalCostsOnly">Custos Adicionais por Dia</option>
-                    <option value="kmDriven">KM Rodados por Dia</option>
+                    <option value="totalCosts">Custos Totais</option>
+                    <option value="carCostOnly">Custo do Carro</option>
+                    <option value="additionalCostsOnly">Custos Adicionais</option>
+                    <option value="kmDriven">KM Rodados</option>
+                    <option value="hoursWorked">Horas Trabalhadas</option>
                  </select>
             </div>
             <LoadingButton
@@ -517,14 +520,25 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <BarChart data={reportData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                             <XAxis dataKey="date" stroke="#a0aec0" fontSize={12} />
-                            <YAxis stroke="#a0aec0" fontSize={12} tickFormatter={(value: number) => metricsInfo[reportConfig.metric].unit === 'KM' ? `${value} KM` : `R$${value}`} />
+                            <YAxis 
+                                stroke="#a0aec0" 
+                                fontSize={12} 
+                                tickFormatter={(value: number) => {
+                                    const unit = metricsInfo[reportConfig.metric].unit;
+                                    if (unit === 'KM') return `${value} KM`;
+                                    if (unit === 'h') return `${value} h`;
+                                    return `R$${value}`;
+                                }} 
+                            />
                             <Tooltip
                                 contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #4a5568', color: '#f9fafb' }}
                                 labelStyle={{ color: '#10b981' }}
-                                formatter={(value: number) => [
-                                    metricsInfo[reportConfig.metric].unit === 'KM' ? `${Number(value).toFixed(1)} KM` : `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`,
-                                    metricsInfo[reportConfig.metric].label
-                                ]}
+                                formatter={(value: number) => {
+                                    const unit = metricsInfo[reportConfig.metric].unit;
+                                    if (unit === 'KM') return [`${Number(value).toFixed(1)} KM`, metricsInfo[reportConfig.metric].label];
+                                    if (unit === 'h') return [`${Number(value).toFixed(1)} h`, metricsInfo[reportConfig.metric].label];
+                                    return [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, metricsInfo[reportConfig.metric].label];
+                                }}
                              />
                             <Bar dataKey="value" fill="#10b981" activeBar={false} />
                         </BarChart>
@@ -541,7 +555,9 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 <p className="font-bold text-white">
                                     {metricsInfo[reportConfig.metric].unit === 'KM' 
                                         ? `${reportTotals.total.toFixed(1)} KM`
-                                        : reportTotals.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                                        : metricsInfo[reportConfig.metric].unit === 'h'
+                                            ? `${reportTotals.total.toFixed(1)} h`
+                                            : reportTotals.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                                     }
                                 </p>
                             </div>
@@ -550,7 +566,9 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 <p className="font-bold text-white">
                                     {metricsInfo[reportConfig.metric].unit === 'KM' 
                                         ? `${reportTotals.average.toFixed(1)} KM`
-                                        : reportTotals.average.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                                        : metricsInfo[reportConfig.metric].unit === 'h'
+                                            ? `${reportTotals.average.toFixed(1)} h`
+                                            : reportTotals.average.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                                     }
                                 </p>
                             </div>
@@ -644,10 +662,10 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
             ) : (
                 <>
                 <div className="grid grid-cols-4 gap-2 mb-4 text-center">
-                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-gray-400">Ganhos</p><p className="font-bold text-sm text-blue-400">{totals.ganhos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
-                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-gray-400">Custos</p><p className="font-bold text-sm text-brand-accent">{totals.custos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
-                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-gray-400">Lucro</p><p className="font-bold text-sm text-brand-primary">{totals.lucroLiquido.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
-                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-gray-400">Horas</p><p className="font-bold text-sm text-purple-400">{totals.totalHoursWorked.toFixed(1)} h</p></div>
+                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-blue-400">Ganhos</p><p className="font-bold text-sm text-blue-400">{totals.ganhos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
+                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-yellow-400">Custos</p><p className="font-bold text-sm text-yellow-400">{totals.custos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
+                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-green-400">Lucro</p><p className="font-bold text-sm text-green-400">{totals.lucroLiquido.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
+                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-purple-400">Horas</p><p className="font-bold text-sm text-purple-400">{totals.totalHoursWorked.toFixed(1)} h</p></div>
                 </div>
 
                 {/* Novo: Resumo de Comparação de Períodos */}
@@ -680,11 +698,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientGanhos" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/>
+                                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/> {/* blue-600 */}
                                             <stop offset="95%" stopColor="#2563eb" stopOpacity={0.3}/>
                                         </linearGradient>
                                         <linearGradient id="gradientCustos" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
+                                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/> {/* amber-500 */}
                                             <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.3}/>
                                         </linearGradient>
                                     </defs>
@@ -728,11 +746,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 <AreaChart data={detailedPeriodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="colorLucro" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/> {/* brand-primary */}
                                             <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                                         </linearGradient>
                                         <linearGradient id="colorPrejuizo" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/> {/* red-500 */}
                                             <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                                         </linearGradient>
                                     </defs>
@@ -744,9 +762,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, 'Lucro Líquido Acumulado']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/> {/* Adicionado Legend */}
                                     <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" />
-                                    <Area type="monotone" dataKey="lucroLiquido" stroke="#10b981" fillOpacity={1} fill="url(#colorLucro)" name="Lucro Líquido" />
+                                    <Area type="monotone" dataKey="lucroLiquido" stroke="#10b981" fillOpacity={1} fill="url(#colorLucro)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
@@ -756,10 +773,10 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Desempenho de Lucro por KM (R$)</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientLucroKm" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
+                                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/> {/* violet-500 */}
                                             <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.3}/>
                                         </linearGradient>
                                     </defs>
@@ -769,11 +786,10 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, 'Lucro/KM']} 
+                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/KM`, 'Lucro/KM']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
-                                    <Bar dataKey="lucroPorKm" name="Lucro/KM" fill="url(#gradientLucroKm)" activeBar={false} />
-                                </BarChart>
+                                    <Area type="monotone" dataKey="lucroPorKm" name="Lucro/KM" stroke="#8b5cf6" fill="url(#gradientLucroKm)" />
+                                </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
@@ -783,10 +799,10 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">KM Rodados</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientKm" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.8}/>
+                                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.8}/> {/* cyan-500 */}
                                             <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.3}/>
                                         </linearGradient>
                                     </defs>
@@ -798,9 +814,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toFixed(1)} KM`, 'KM Rodados']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
-                                    <Bar dataKey="kmRodados" name="KM" fill="url(#gradientKm)" activeBar={false} />
-                                </BarChart>
+                                    <Area type="monotone" dataKey="kmRodados" name="KM" stroke="#06b6d4" fill="url(#gradientKm)" />
+                                </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
@@ -810,10 +825,10 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Total de Horas Trabalhadas</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientHoras" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#a855f7" stopOpacity={0.8}/>
+                                            <stop offset="5%" stopColor="#a855f7" stopOpacity={0.8}/> {/* fuchsia-500 */}
                                             <stop offset="95%" stopColor="#a855f7" stopOpacity={0.3}/>
                                         </linearGradient>
                                     </defs>
@@ -825,9 +840,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toFixed(1)} h`, 'Horas Trabalhadas']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
-                                    <Bar dataKey="totalHoursWorked" name="Horas" fill="url(#gradientHoras)" activeBar={false} />
-                                </BarChart>
+                                    <Area type="monotone" dataKey="totalHoursWorked" name="Horas" stroke="#a855f7" fill="url(#gradientHoras)" />
+                                </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
@@ -837,7 +851,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Ganhos por Hora (R$/h)</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientGanhosPorHora" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.8}/> {/* sky-500 */}
@@ -852,9 +866,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h`, 'Ganhos por Hora']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
-                                    <Bar dataKey="ganhosPorHora" name="Ganhos/h" fill="url(#gradientGanhosPorHora)" activeBar={false} />
-                                </BarChart>
+                                    <Area type="monotone" dataKey="ganhosPorHora" name="Ganhos/h" stroke="#0ea5e9" fill="url(#gradientGanhosPorHora)" />
+                                </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
@@ -864,9 +877,9 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Lucro Líquido por Hora (R$/h)</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
-                                        <linearGradient id="gradientLucroLiquidoPorHora" x1="0" y1="0" y2="1">
+                                        <linearGradient id="gradientLucroLiquidoPorHora" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/> {/* orange-500 */}
                                             <stop offset="95%" stopColor="#f97316" stopOpacity={0.3}/>
                                         </linearGradient>
@@ -879,9 +892,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h`, 'Lucro Líquido por Hora']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
-                                    <Bar dataKey="lucroLiquidoPorHora" name="Lucro Líquido/h" fill="url(#gradientLucroLiquidoPorHora)" activeBar={false} />
-                                </BarChart>
+                                    <Area type="monotone" dataKey="lucroLiquidoPorHora" name="Lucro Líquido/h" stroke="#f97316" fill="url(#gradientLucroLiquidoPorHora)" />
+                                </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
@@ -891,10 +903,10 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">R$/KM Bruto</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientGanhosKmBruto" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/> {/* emerald-500 */}
                                             <stop offset="95%" stopColor="#22c55e" stopOpacity={0.3}/>
                                         </linearGradient>
                                     </defs>
@@ -904,11 +916,10 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, 'R$/KM Bruto']} 
+                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/KM`, 'R$/KM Bruto']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
-                                    <Bar dataKey="ganhosPorKmBruto" name="R$/KM Bruto" fill="url(#gradientGanhosKmBruto)" activeBar={false} />
-                                </BarChart>
+                                    <Area type="monotone" dataKey="ganhosPorKmBruto" name="R$/KM Bruto" stroke="#22c55e" fill="url(#gradientGanhosKmBruto)" />
+                                </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
@@ -918,10 +929,10 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Margem de Lucro (%)</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientMargem" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#e11d48" stopOpacity={0.8}/>
+                                            <stop offset="5%" stopColor="#e11d48" stopOpacity={0.8}/> {/* rose-600 */}
                                             <stop offset="95%" stopColor="#e11d48" stopOpacity={0.3}/>
                                         </linearGradient>
                                     </defs>
@@ -933,9 +944,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toFixed(1)}%`, 'Margem de Lucro']} 
                                     />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
-                                    <Bar dataKey="margemLucro" name="Margem %" fill="url(#gradientMargem)" activeBar={false} />
-                                </BarChart>
+                                    <Area type="monotone" dataKey="margemLucro" name="Margem %" stroke="#e11d48" fill="url(#gradientMargem)" />
+                                </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
