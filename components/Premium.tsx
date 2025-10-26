@@ -201,6 +201,107 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
 
   }, [records, settings, periodType, selectedPeriodKey]);
 
+  // Novo: Dados cumulativos para KM Rodados
+  const cumulativeKmData = useMemo(() => {
+    if (!selectedPeriodKey) return [];
+
+    const filteredRecords = records.filter((r: RunRecord) => getPeriodKey(r.date, periodType) === selectedPeriodKey)
+                                   .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const dailyDataMap = new Map<string, { date: string; kmDriven: number }>();
+    let cumulativeKm = 0;
+
+    const startDate = new Date(selectedPeriodKey.includes('W') ? selectedPeriodKey.substring(1) : selectedPeriodKey);
+    let endDate = new Date(startDate);
+
+    if (periodType === 'weekly') {
+      endDate.setDate(startDate.getDate() + 6);
+    } else if (periodType === 'monthly') {
+      endDate.setMonth(startDate.getMonth() + 1);
+      endDate.setDate(0);
+    } else {
+      endDate.setFullYear(startDate.getFullYear() + 1);
+      endDate.setDate(0);
+      endDate.setMonth(11);
+    }
+
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dateKey = d.toISOString().split('T')[0];
+      dailyDataMap.set(dateKey, { date: dateKey, kmDriven: 0 });
+    }
+
+    filteredRecords.forEach(record => {
+      const dateKey = new Date(record.date).toISOString().split('T')[0];
+      const existing = dailyDataMap.get(dateKey);
+      if (existing) {
+        existing.kmDriven += record.kmDriven;
+      } else {
+        dailyDataMap.set(dateKey, { date: dateKey, kmDriven: record.kmDriven });
+      }
+    });
+
+    const result = Array.from(dailyDataMap.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    return result.map(item => {
+      cumulativeKm += item.kmDriven;
+      return {
+        name: new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+        kmRodados: parseFloat(cumulativeKm.toFixed(1)),
+      };
+    });
+  }, [records, periodType, selectedPeriodKey]);
+
+  // Novo: Dados cumulativos para Horas Trabalhadas
+  const cumulativeHoursData = useMemo(() => {
+    if (!selectedPeriodKey) return [];
+
+    const filteredRecords = records.filter((r: RunRecord) => getPeriodKey(r.date, periodType) === selectedPeriodKey)
+                                   .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const dailyDataMap = new Map<string, { date: string; hoursWorked: number }>();
+    let cumulativeHours = 0;
+
+    const startDate = new Date(selectedPeriodKey.includes('W') ? selectedPeriodKey.substring(1) : selectedPeriodKey);
+    let endDate = new Date(startDate);
+
+    if (periodType === 'weekly') {
+      endDate.setDate(startDate.getDate() + 6);
+    } else if (periodType === 'monthly') {
+      endDate.setMonth(startDate.getMonth() + 1);
+      endDate.setDate(0);
+    } else {
+      endDate.setFullYear(startDate.getFullYear() + 1);
+      endDate.setDate(0);
+      endDate.setMonth(11);
+    }
+
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dateKey = d.toISOString().split('T')[0];
+      dailyDataMap.set(dateKey, { date: dateKey, hoursWorked: 0 });
+    }
+
+    filteredRecords.forEach(record => {
+      const dateKey = new Date(record.date).toISOString().split('T')[0];
+      const existing = dailyDataMap.get(dateKey);
+      if (existing) {
+        existing.hoursWorked += record.hoursWorked || 0;
+      } else {
+        dailyDataMap.set(dateKey, { date: dateKey, hoursWorked: record.hoursWorked || 0 });
+      }
+    });
+
+    const result = Array.from(dailyDataMap.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    return result.map(item => {
+      cumulativeHours += item.hoursWorked;
+      return {
+        name: new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+        totalHoursWorked: parseFloat(cumulativeHours.toFixed(1)),
+      };
+    });
+  }, [records, periodType, selectedPeriodKey]);
+
+
   useEffect(() => {
     if (periodicData.length > 0) {
       setSelectedPeriodKey(periodicData[periodicData.length - 1].key);
@@ -799,7 +900,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">KM Rodados</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <AreaChart data={cumulativeKmData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}> {/* Usando cumulativeKmData */}
                                     <defs>
                                         <linearGradient id="gradientKm" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.8}/> {/* cyan-500 */}
@@ -812,7 +913,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toFixed(1)} KM`, 'KM Rodados']} 
+                                        formatter={(value: number) => [`${Number(value).toFixed(1)} KM`, 'KM Rodados Acumulados']} 
                                     />
                                     <Area type="monotone" dataKey="kmRodados" name="KM" stroke="#06b6d4" fill="url(#gradientKm)" />
                                 </AreaChart>
@@ -825,7 +926,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Total de Horas Trabalhadas</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <AreaChart data={cumulativeHoursData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}> {/* Usando cumulativeHoursData */}
                                     <defs>
                                         <linearGradient id="gradientHoras" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#a855f7" stopOpacity={0.8}/> {/* fuchsia-500 */}
@@ -838,7 +939,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                     <Tooltip 
                                         contentStyle={tooltipContentStyle}
                                         labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toFixed(1)} h`, 'Horas Trabalhadas']} 
+                                        formatter={(value: number) => [`${Number(value).toFixed(1)} h`, 'Horas Trabalhadas Acumuladas']} 
                                     />
                                     <Area type="monotone" dataKey="totalHoursWorked" name="Horas" stroke="#a855f7" fill="url(#gradientHoras)" />
                                 </AreaChart>
