@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Crown, Zap, BarChart2, Unlock, Loader2, MessageSquare, ArrowLeft, BrainCircuit, CalendarDays, Calculator, FileBarChart2, User, Bot } from 'lucide-react';
@@ -90,6 +90,10 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     return date.getUTCFullYear().toString();
   };
 
+  // 'formatPeriodLabel' is declared but its value is never read. (TS6133)
+  // This function is used within the periodicData useMemo, so it is read.
+  // The TS error might be a false positive or related to other compilation issues.
+  // Keeping it as it is correctly used in the logic.
   const formatPeriodLabel = (key: string, period: PeriodType): string => {
     if (period === 'weekly') {
       const date = new Date(key.substring(1));
@@ -102,6 +106,128 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     }
   };
 
+  // Função genérica para obter dados detalhados por dia ou mês dentro de um período selecionado
+  const getDetailedPeriodData = useCallback((
+    records: RunRecord[],
+    settings: AppSettings,
+    periodType: PeriodType,
+    selectedPeriodKey: string | null,
+    metricType: 'cumulative' | 'average' | 'sum', // 'sum' para somar valores por sub-período
+    metricKey: 'netProfit' | 'kmDriven' | 'hoursWorked' | 'profitPerKm' | 'ganhosPorHora' | 'lucroLiquidoPorHora' | 'ganhosPorKmBruto' | 'margemLucro' | 'totalEarnings' | 'totalCosts'
+  ) => {
+    if (!selectedPeriodKey) return [];
+
+    const filteredRecords = records.filter((r: RunRecord) => getPeriodKey(r.date, periodType) === selectedPeriodKey)
+                                   .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const aggregatedData = new Map<string, { sum: number; count: number; }>();
+
+    const startDate = new Date(selectedPeriodKey.includes('W') ? selectedPeriodKey.substring(1) : selectedPeriodKey);
+    let endDate = new Date(startDate);
+
+    let aggregationUnit: 'day' | 'month';
+
+    if (periodType === 'weekly' || periodType === 'monthly') {
+      // Para semanal, endDate é 6 dias após startDate. Para mensal, é o último dia do mês.
+      if (periodType === 'weekly') {
+        endDate.setDate(startDate.getDate() + 6);
+      } else { // monthly
+        endDate.setMonth(startDate.getMonth() + 1);
+        endDate.setDate(0); // Last day of the month
+      }
+      aggregationUnit = 'day';
+    } else { // annual
+      endDate.setFullYear(startDate.getFullYear() + 1);
+      endDate.setDate(0); // Last day of previous month
+      endDate.setMonth(11); // December
+      aggregationUnit = 'month';
+    }
+
+    // Initialize map with all periods (days or months)
+    if (aggregationUnit === 'day') {
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dateKey = d.toISOString().split('T')[0];
+        aggregatedData.set(dateKey, { sum: 0, count: 0 });
+      }
+    } else { // aggregationUnit === 'month'
+      for (let m = new Date(startDate.getFullYear(), 0); m.getFullYear() === startDate.getFullYear(); m.setMonth(m.getMonth() + 1)) {
+        const monthKey = m.toISOString().slice(0, 7);
+        aggregatedData.set(monthKey, { sum: 0, count: 0 });
+      }
+    }
+
+    filteredRecords.forEach(record => {
+      const carCost = record.kmDriven * settings.costPerKm;
+      const additionalCosts = record.additionalCosts || 0;
+      const totalCosts = carCost + additionalCosts;
+      const netProfit = record.totalEarnings - totalCosts;
+
+      let key: string;
+      if (aggregationUnit === 'day') {
+        key = new Date(record.date).toISOString().split('T')[0];
+      } else { // aggregationUnit === 'month'
+        key = new Date(record.date).toISOString().slice(0, 7);
+      }
+
+      let valueToAdd = 0;
+      let shouldCount = false;
+
+      switch (metricKey) {
+        case 'netProfit': valueToAdd = netProfit; shouldCount = true; break;
+        case 'kmDriven': valueToAdd = record.kmDriven; shouldCount = true; break;
+        case 'hoursWorked': valueToAdd = record.hoursWorked || 0; shouldCount = true; break;
+        // Corrected 'record.hoursWorked' possibly 'undefined' errors
+        case 'profitPerKm': valueToAdd = record.kmDriven > 0 ? netProfit / record.kmDriven : 0; shouldCount = record.kmDriven > 0; break;
+        case 'ganhosPorHora': valueToAdd = (record.hoursWorked || 0) > 0 ? record.totalEarnings / (record.hoursWorked || 0) : 0; shouldCount = (record.hoursWorked || 0) > 0; break;
+        case 'lucroLiquidoPorHora': valueToAdd = (record.hoursWorked || 0) > 0 ? netProfit / (record.hoursWorked || 0) : 0; shouldCount = (record.hoursWorked || 0) > 0; break;
+        case 'ganhosPorKmBruto': valueToAdd = record.kmDriven > 0 ? record.totalEarnings / record.kmDriven : 0; shouldCount = record.kmDriven > 0; break;
+        case 'margemLucro': valueToAdd = record.totalEarnings > 0 ? (netProfit / record.totalEarnings) * 100 : 0; shouldCount = record.totalEarnings > 0; break;
+        case 'totalEarnings': valueToAdd = record.totalEarnings; shouldCount = true; break;
+        case 'totalCosts': valueToAdd = totalCosts; shouldCount = true; break;
+      }
+
+      const entry = aggregatedData.get(key);
+      if (entry) {
+        entry.sum += valueToAdd;
+        if (shouldCount) entry.count++;
+      } else {
+        // This case should ideally not be hit if dataMap is pre-populated correctly
+        aggregatedData.set(key, { sum: valueToAdd, count: shouldCount ? 1 : 0 });
+      }
+    });
+
+    const sortedKeys = Array.from(aggregatedData.keys()).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
+    let cumulativeTracker = 0;
+    return sortedKeys.map(key => {
+      const item = aggregatedData.get(key)!;
+      let displayValue: number;
+
+      if (metricType === 'cumulative') {
+        cumulativeTracker += item.sum;
+        displayValue = cumulativeTracker;
+      } else if (metricType === 'average') {
+        displayValue = item.count > 0 ? item.sum / item.count : 0;
+      } else { // metricType === 'sum'
+        displayValue = item.sum;
+      }
+
+      let nameLabel: string;
+      if (aggregationUnit === 'day') {
+        nameLabel = new Date(key).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      } else { // aggregationUnit === 'month'
+        nameLabel = new Date(key + '-01').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+      }
+
+      return {
+        name: nameLabel,
+        value: parseFloat(displayValue.toFixed(2)),
+      };
+    });
+  }, [records, settings, periodType, getPeriodKey]);
+
+  // O useMemo para periodicData foi movido para baixo para garantir que getDetailedPeriodData esteja definido.
+  // Ele agora é usado para obter os dados agregados por período (semana, mês, ano) para o resumo e seleção.
   const periodicData = useMemo(() => {
     const sortedRecords = [...records].sort((a: RunRecord, b: RunRecord) => new Date(a.date).getTime() - new Date(b.date).getTime());
     const aggregated = sortedRecords.reduce((acc: any, record: RunRecord) => {
@@ -141,174 +267,89 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     
     result.sort((a: any, b: any) => a.key.localeCompare(b.key));
 
-    if (!selectedPeriodKey && result.length > 0) {
-      setSelectedPeriodKey(result[result.length - 1].key);
-    }
-
     return result;
-  }, [records, settings, periodType, selectedPeriodKey]);
-
-  const detailedPeriodicData = useMemo(() => {
-    if (!selectedPeriodKey) return [];
-
-    const filteredRecords = records.filter((r: RunRecord) => getPeriodKey(r.date, periodType) === selectedPeriodKey)
-                                   .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    const dailyDataMap = new Map<string, { date: string; lucroLiquido: number }>();
-    let cumulativeProfit = 0;
-
-    const startDate = new Date(selectedPeriodKey.includes('W') ? selectedPeriodKey.substring(1) : selectedPeriodKey);
-    let endDate = new Date(startDate);
-
-    if (periodType === 'weekly') {
-      endDate.setDate(startDate.getDate() + 6);
-    } else if (periodType === 'monthly') {
-      endDate.setMonth(startDate.getMonth() + 1);
-      endDate.setDate(0);
-    } else {
-      endDate.setFullYear(startDate.getFullYear() + 1);
-      endDate.setDate(0);
-      endDate.setMonth(11);
-    }
-
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      const dateKey = d.toISOString().split('T')[0];
-      dailyDataMap.set(dateKey, { date: dateKey, lucroLiquido: 0 });
-    }
-
-    filteredRecords.forEach(record => {
-      const dateKey = new Date(record.date).toISOString().split('T')[0];
-      const carCost = record.kmDriven * settings.costPerKm;
-      const netProfit = record.totalEarnings - (record.additionalCosts || 0) - carCost;
-      
-      const existing = dailyDataMap.get(dateKey);
-      if (existing) {
-        existing.lucroLiquido += netProfit;
-      } else {
-        dailyDataMap.set(dateKey, { date: dateKey, lucroLiquido: netProfit });
-      }
-    });
-
-    const result = Array.from(dailyDataMap.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    return result.map(item => {
-      cumulativeProfit += item.lucroLiquido;
-      return {
-        name: new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-        lucroLiquido: parseFloat(cumulativeProfit.toFixed(2)),
-      };
-    });
-
-  }, [records, settings, periodType, selectedPeriodKey]);
-
-  // Novo: Dados cumulativos para KM Rodados
-  const cumulativeKmData = useMemo(() => {
-    if (!selectedPeriodKey) return [];
-
-    const filteredRecords = records.filter((r: RunRecord) => getPeriodKey(r.date, periodType) === selectedPeriodKey)
-                                   .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    const dailyDataMap = new Map<string, { date: string; kmDriven: number }>();
-    let cumulativeKm = 0;
-
-    const startDate = new Date(selectedPeriodKey.includes('W') ? selectedPeriodKey.substring(1) : selectedPeriodKey);
-    let endDate = new Date(startDate);
-
-    if (periodType === 'weekly') {
-      endDate.setDate(startDate.getDate() + 6);
-    } else if (periodType === 'monthly') {
-      endDate.setMonth(startDate.getMonth() + 1);
-      endDate.setDate(0);
-    } else {
-      endDate.setFullYear(startDate.getFullYear() + 1);
-      endDate.setDate(0);
-      endDate.setMonth(11);
-    }
-
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      const dateKey = d.toISOString().split('T')[0];
-      dailyDataMap.set(dateKey, { date: dateKey, kmDriven: 0 });
-    }
-
-    filteredRecords.forEach(record => {
-      const dateKey = new Date(record.date).toISOString().split('T')[0];
-      const existing = dailyDataMap.get(dateKey);
-      if (existing) {
-        existing.kmDriven += record.kmDriven;
-      } else {
-        dailyDataMap.set(dateKey, { date: dateKey, kmDriven: record.kmDriven });
-      }
-    });
-
-    const result = Array.from(dailyDataMap.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    return result.map(item => {
-      cumulativeKm += item.kmDriven;
-      return {
-        name: new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-        kmRodados: parseFloat(cumulativeKm.toFixed(1)),
-      };
-    });
-  }, [records, periodType, selectedPeriodKey]);
-
-  // Novo: Dados cumulativos para Horas Trabalhadas
-  const cumulativeHoursData = useMemo(() => {
-    if (!selectedPeriodKey) return [];
-
-    const filteredRecords = records.filter((r: RunRecord) => getPeriodKey(r.date, periodType) === selectedPeriodKey)
-                                   .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    const dailyDataMap = new Map<string, { date: string; hoursWorked: number }>();
-    let cumulativeHours = 0;
-
-    const startDate = new Date(selectedPeriodKey.includes('W') ? selectedPeriodKey.substring(1) : selectedPeriodKey);
-    let endDate = new Date(startDate);
-
-    if (periodType === 'weekly') {
-      endDate.setDate(startDate.getDate() + 6);
-    } else if (periodType === 'monthly') {
-      endDate.setMonth(startDate.getMonth() + 1);
-      endDate.setDate(0);
-    } else {
-      endDate.setFullYear(startDate.getFullYear() + 1);
-      endDate.setDate(0);
-      endDate.setMonth(11);
-    }
-
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      const dateKey = d.toISOString().split('T')[0];
-      dailyDataMap.set(dateKey, { date: dateKey, hoursWorked: 0 });
-    }
-
-    filteredRecords.forEach(record => {
-      const dateKey = new Date(record.date).toISOString().split('T')[0];
-      const existing = dailyDataMap.get(dateKey);
-      if (existing) {
-        existing.hoursWorked += record.hoursWorked || 0;
-      } else {
-        dailyDataMap.set(dateKey, { date: dateKey, hoursWorked: record.hoursWorked || 0 });
-      }
-    });
-
-    const result = Array.from(dailyDataMap.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    return result.map(item => {
-      cumulativeHours += item.hoursWorked;
-      return {
-        name: new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-        totalHoursWorked: parseFloat(cumulativeHours.toFixed(1)),
-      };
-    });
-  }, [records, periodType, selectedPeriodKey]);
-
+  }, [records, settings, periodType, formatPeriodLabel, getPeriodKey]); // Adicionado formatPeriodLabel e getPeriodKey como dependências
 
   useEffect(() => {
-    if (periodicData.length > 0) {
+    if (periodicData.length > 0 && !selectedPeriodKey) { // Adicionado !selectedPeriodKey para evitar sobrescrever seleção manual
       setSelectedPeriodKey(periodicData[periodicData.length - 1].key);
-    } else {
+    } else if (periodicData.length === 0) {
       setSelectedPeriodKey(null);
     }
-  }, [periodType, periodicData.length]);
+  }, [periodType, periodicData, selectedPeriodKey]); // periodicData como dependência
+
+  // Dados para Evolução do Lucro Líquido (AreaChart - cumulativo)
+  const detailedLucroLiquidoData = useMemo(() => {
+    return getDetailedPeriodData(records, settings, periodType, selectedPeriodKey, 'cumulative', 'netProfit');
+  }, [records, settings, periodType, selectedPeriodKey, getDetailedPeriodData]);
+
+  // Dados para KM Rodados (AreaChart - cumulativo)
+  const cumulativeKmData = useMemo(() => {
+    return getDetailedPeriodData(records, settings, periodType, selectedPeriodKey, 'cumulative', 'kmDriven');
+  }, [records, settings, periodType, selectedPeriodKey, getDetailedPeriodData]);
+
+  // Dados para Total de Horas Trabalhadas (AreaChart - cumulativo)
+  const cumulativeHoursData = useMemo(() => {
+    return getDetailedPeriodData(records, settings, periodType, selectedPeriodKey, 'cumulative', 'hoursWorked');
+  }, [records, settings, periodType, selectedPeriodKey, getDetailedPeriodData]);
+
+  // Dados para Ganhos Brutos vs. Custos Totais (BarChart - soma por sub-período)
+  const detailedGanhosCustosData = useMemo(() => {
+    const ganhosData = getDetailedPeriodData(records, settings, periodType, selectedPeriodKey, 'sum', 'totalEarnings');
+    const custosData = getDetailedPeriodData(records, settings, periodType, selectedPeriodKey, 'sum', 'totalCosts');
+
+    const merged = new Map<string, { name: string; ganhos: number; custos: number }>();
+    ganhosData.forEach((item: { name: string; value: number }) => merged.set(item.name, { name: item.name, ganhos: item.value, custos: 0 }));
+    custosData.forEach((item: { name: string; value: number }) => {
+      const existing = merged.get(item.name);
+      if (existing) {
+        existing.custos = item.value;
+      } else {
+        merged.set(item.name, { name: item.name, ganhos: 0, custos: item.value });
+      }
+    });
+    // Sort by original date key for correct order
+    return Array.from(merged.values()).sort((a, b) => {
+      // Ajuste para ordenar corretamente por data, considerando o formato 'DD/MM' ou 'MMM YY'
+      const parseDate = (name: string) => {
+        if (name.includes('/')) { // DD/MM
+          const [day, month] = name.split('/');
+          return new Date(new Date().getFullYear(), parseInt(month) - 1, parseInt(day));
+        } else { // MMM YY (e.g., Jan 24)
+          const [monthStr, yearStr] = name.split(' ');
+          const monthIndex = new Date(Date.parse(monthStr + " 1, 2000")).getMonth(); // Get month index from string
+          return new Date(2000 + parseInt(yearStr), monthIndex, 1);
+        }
+      };
+      return parseDate(a.name).getTime() - parseDate(b.name).getTime();
+    });
+  }, [records, settings, periodType, selectedPeriodKey, getDetailedPeriodData]);
+
+  // Dados para Desempenho de Lucro por KM (LineChart - média por sub-período)
+  const detailedLucroPorKmData = useMemo(() => {
+    return getDetailedPeriodData(records, settings, periodType, selectedPeriodKey, 'average', 'profitPerKm');
+  }, [records, settings, periodType, selectedPeriodKey, getDetailedPeriodData]);
+
+  // Dados para Ganhos por Hora (LineChart - média por sub-período)
+  const detailedGanhosPorHoraData = useMemo(() => {
+    return getDetailedPeriodData(records, settings, periodType, selectedPeriodKey, 'average', 'ganhosPorHora');
+  }, [records, settings, periodType, selectedPeriodKey, getDetailedPeriodData]);
+
+  // Dados para Lucro Líquido por Hora (LineChart - média por sub-período)
+  const detailedLucroLiquidoPorHoraData = useMemo(() => {
+    return getDetailedPeriodData(records, settings, periodType, selectedPeriodKey, 'average', 'lucroLiquidoPorHora');
+  }, [records, settings, periodType, selectedPeriodKey, getDetailedPeriodData]);
+
+  // Dados para R$/KM Bruto (LineChart - média por sub-período)
+  const detailedGanhosPorKmBrutoData = useMemo(() => {
+    return getDetailedPeriodData(records, settings, periodType, selectedPeriodKey, 'average', 'ganhosPorKmBruto');
+  }, [records, settings, periodType, selectedPeriodKey, getDetailedPeriodData]);
+
+  // Dados para Margem de Lucro (%) (LineChart - média por sub-período)
+  const detailedMargemLucroData = useMemo(() => {
+    return getDetailedPeriodData(records, settings, periodType, selectedPeriodKey, 'average', 'margemLucro');
+  }, [records, settings, periodType, selectedPeriodKey, getDetailedPeriodData]);
+
 
   const handleAnalyze = async () => {
     if (records.length < 3) {
@@ -796,7 +837,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Ganhos Brutos vs. Custos Totais</h3>
                         <div className="w-full h-60">
                             <ResponsiveContainer>
-                                <BarChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <BarChart data={detailedGanhosCustosData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientGanhos" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/> {/* blue-600 */}
@@ -844,7 +885,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         )}
                         <div className="w-full h-60">
                             <ResponsiveContainer>
-                                <AreaChart data={detailedPeriodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <AreaChart data={detailedLucroLiquidoData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="colorLucro" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/> {/* brand-primary */}
@@ -864,7 +905,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, 'Lucro Líquido Acumulado']} 
                                     />
                                     <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" />
-                                    <Area type="monotone" dataKey="lucroLiquido" stroke="#10b981" fillOpacity={1} fill="url(#colorLucro)" />
+                                    <Area type="monotone" dataKey="value" stroke="#10b981" fillOpacity={1} fill="url(#colorLucro)" name="Lucro Líquido" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
@@ -874,7 +915,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Desempenho de Lucro por KM (R$)</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <LineChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <LineChart data={detailedLucroPorKmData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
@@ -883,7 +924,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/KM`, 'Lucro/KM']} 
                                     />
-                                    <Line type="monotone" dataKey="lucroPorKm" name="Lucro/KM" stroke="#8b5cf6" activeDot={{ r: 6 }} /> {/* violet-500 */}
+                                    <Line type="monotone" dataKey="value" name="Lucro/KM" stroke="#8b5cf6" activeDot={{ r: 6 }} /> {/* violet-500 */}
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
@@ -894,7 +935,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">KM Rodados</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <AreaChart data={cumulativeKmData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}> {/* Usando cumulativeKmData */}
+                                <AreaChart data={cumulativeKmData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientKm" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.8}/> {/* cyan-500 */}
@@ -909,7 +950,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toFixed(1)} KM`, 'KM Rodados Acumulados']} 
                                     />
-                                    <Area type="monotone" dataKey="kmRodados" name="KM" stroke="#06b6d4" fill="url(#gradientKm)" />
+                                    <Area type="monotone" dataKey="value" name="KM" stroke="#06b6d4" fill="url(#gradientKm)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
@@ -920,7 +961,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Total de Horas Trabalhadas</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <AreaChart data={cumulativeHoursData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}> {/* Usando cumulativeHoursData */}
+                                <AreaChart data={cumulativeHoursData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientHoras" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#a855f7" stopOpacity={0.8}/> {/* fuchsia-500 */}
@@ -935,7 +976,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toFixed(1)} h`, 'Horas Trabalhadas Acumuladas']} 
                                     />
-                                    <Area type="monotone" dataKey="totalHoursWorked" name="Horas" stroke="#a855f7" fill="url(#gradientHoras)" />
+                                    <Area type="monotone" dataKey="value" name="Horas" stroke="#a855f7" fill="url(#gradientHoras)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
@@ -946,7 +987,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Ganhos por Hora (R$/h)</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <LineChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <LineChart data={detailedGanhosPorHoraData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `R$${value}`} />
@@ -955,7 +996,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h`, 'Ganhos por Hora']} 
                                     />
-                                    <Line type="monotone" dataKey="ganhosPorHora" name="Ganhos/h" stroke="#0ea5e9" activeDot={{ r: 6 }} /> {/* sky-500 */}
+                                    <Line type="monotone" dataKey="value" name="Ganhos/h" stroke="#0ea5e9" activeDot={{ r: 6 }} /> {/* sky-500 */}
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
@@ -966,7 +1007,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Lucro Líquido por Hora (R$/h)</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <LineChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <LineChart data={detailedLucroLiquidoPorHoraData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `R$${value}`} />
@@ -975,7 +1016,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h`, 'Lucro Líquido por Hora']} 
                                     />
-                                    <Line type="monotone" dataKey="lucroLiquidoPorHora" name="Lucro Líquido/h" stroke="#f97316" activeDot={{ r: 6 }} /> {/* orange-500 */}
+                                    <Line type="monotone" dataKey="value" name="Lucro Líquido/h" stroke="#f97316" activeDot={{ r: 6 }} /> {/* orange-500 */}
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
@@ -986,7 +1027,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">R$/KM Bruto</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <LineChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <LineChart data={detailedGanhosPorKmBrutoData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
@@ -995,7 +1036,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/KM`, 'R$/KM Bruto']} 
                                     />
-                                    <Line type="monotone" dataKey="ganhosPorKmBruto" name="R$/KM Bruto" stroke="#22c55e" activeDot={{ r: 6 }} /> {/* emerald-500 */}
+                                    <Line type="monotone" dataKey="value" name="R$/KM Bruto" stroke="#22c55e" activeDot={{ r: 6 }} /> {/* emerald-500 */}
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
@@ -1006,7 +1047,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Margem de Lucro (%)</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <LineChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <LineChart data={detailedMargemLucroData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value}%`} />
@@ -1015,7 +1056,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toFixed(1)}%`, 'Margem de Lucro']} 
                                     />
-                                    <Line type="monotone" dataKey="margemLucro" name="Margem %" stroke="#e11d48" activeDot={{ r: 6 }} /> {/* rose-600 */}
+                                    <Line type="monotone" dataKey="value" name="Margem %" stroke="#e11d48" activeDot={{ r: 6 }} /> {/* rose-600 */}
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
