@@ -109,7 +109,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
   const formatPeriodLabel = (key: string, period: PeriodType): string => {
     if (period === 'weekly') {
       const date = new Date(key.substring(1));
-      return `Semana ${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`;
+      // Garante que a formatação use UTC para evitar problemas de fuso horário
+      return `Semana ${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' })}`;
     } else if (period === 'monthly') {
       const [year, month] = key.split('-');
       return `${month}/${year.slice(2)}`;
@@ -141,14 +142,18 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       .sort((a, b) => new Date(a.key.replace('W', '')).getTime() - new Date(b.key.replace('W', '')).getTime());
   }, [records, periodType, formatPeriodLabel, getPeriodKey]);
 
-  // Efeito para definir o selectedPeriodKey padrão (o mais recente)
+  // Efeito para definir o selectedPeriodKey padrão (o mais recente) ou manter a seleção
   useEffect(() => {
     if (availablePeriods.length > 0) {
-      setSelectedPeriodKey(availablePeriods[availablePeriods.length - 1].key);
-    } else {
+      const latestPeriodKey = availablePeriods[availablePeriods.length - 1].key;
+      // Só define o padrão se não houver nada selecionado ou se a seleção atual não estiver nos períodos disponíveis
+      if (!selectedPeriodKey || !availablePeriods.some(p => p.key === selectedPeriodKey)) {
+        setSelectedPeriodKey(latestPeriodKey);
+      }
+    } else if (selectedPeriodKey !== null) { // Se não há períodos disponíveis, limpa a seleção
       setSelectedPeriodKey(null);
     }
-  }, [periodType, availablePeriods]); // Depende de periodType e availablePeriods
+  }, [periodType, availablePeriods, selectedPeriodKey]); // selectedPeriodKey como dependência para reagir a mudanças manuais
 
   // Função genérica para obter dados detalhados por dia ou mês dentro de um período selecionado
   const getDetailedPeriodData = useCallback((
@@ -159,7 +164,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     metricType: 'cumulative' | 'average' | 'sum', // 'sum' para somar valores por sub-período
     metricKey: 'netProfit' | 'kmDriven' | 'hoursWorked' | 'profitPerKm' | 'ganhosPorHora' | 'lucroLiquidoPorHora' | 'ganhosPorKmBruto' | 'margemLucro' | 'totalEarnings' | 'totalCosts'
   ) => {
-    if (!selectedPeriodKey || selectedPeriodKey.trim() === '') { // Adicionado: Verificação para string vazia
+    if (!selectedPeriodKey || selectedPeriodKey.trim() === '') {
       return [];
     }
 
@@ -177,12 +182,12 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       aggregationUnit = 'day';
       const dateStringForStartDate = selectedPeriodKey.substring(1);
       subPeriodStartDate = new Date(dateStringForStartDate);
-      if (isNaN(subPeriodStartDate.getTime())) { // Adicionado: Validação de data
+      if (isNaN(subPeriodStartDate.getTime())) {
         return [];
       }
       subPeriodEndDate = new Date(subPeriodStartDate);
       subPeriodEndDate.setDate(subPeriodStartDate.getDate() + 6);
-      if (isNaN(subPeriodEndDate.getTime())) { // Adicionado: Validação de data
+      if (isNaN(subPeriodEndDate.getTime())) {
         return [];
       }
     } else if (periodType === 'monthly') {
@@ -195,7 +200,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       }
       subPeriodStartDate = new Date(year, month - 1, 1); // First day of the month
       subPeriodEndDate = new Date(year, month, 0); // Last day of the month
-      if (isNaN(subPeriodStartDate.getTime()) || isNaN(subPeriodEndDate.getTime())) { // Adicionado: Validação de data
+      if (isNaN(subPeriodStartDate.getTime()) || isNaN(subPeriodEndDate.getTime())) {
         return [];
       }
     } else { // annual
@@ -206,7 +211,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       }
       subPeriodStartDate = new Date(year, 0, 1); // First day of the year
       subPeriodEndDate = new Date(year, 11, 31); // Last day of the year
-      if (isNaN(subPeriodStartDate.getTime()) || isNaN(subPeriodEndDate.getTime())) { // Adicionado: Validação de data
+      if (isNaN(subPeriodStartDate.getTime()) || isNaN(subPeriodEndDate.getTime())) {
         return [];
       }
     }
