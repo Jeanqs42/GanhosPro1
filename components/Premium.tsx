@@ -90,10 +90,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     return date.getUTCFullYear().toString();
   };
 
-  // 'formatPeriodLabel' is declared but its value is never read. (TS6133)
-  // This function is used within the periodicData useMemo, so it is read.
-  // The TS error might be a false positive or related to other compilation issues.
-  // Keeping it as it is correctly used in the logic.
   const formatPeriodLabel = (key: string, period: PeriodType): string => {
     if (period === 'weekly') {
       const date = new Date(key.substring(1));
@@ -176,7 +172,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
         case 'netProfit': valueToAdd = netProfit; shouldCount = true; break;
         case 'kmDriven': valueToAdd = record.kmDriven; shouldCount = true; break;
         case 'hoursWorked': valueToAdd = record.hoursWorked || 0; shouldCount = true; break;
-        // Corrected 'record.hoursWorked' possibly 'undefined' errors
         case 'profitPerKm': valueToAdd = record.kmDriven > 0 ? netProfit / record.kmDriven : 0; shouldCount = record.kmDriven > 0; break;
         case 'ganhosPorHora': valueToAdd = (record.hoursWorked || 0) > 0 ? record.totalEarnings / (record.hoursWorked || 0) : 0; shouldCount = (record.hoursWorked || 0) > 0; break;
         case 'lucroLiquidoPorHora': valueToAdd = (record.hoursWorked || 0) > 0 ? netProfit / (record.hoursWorked || 0) : 0; shouldCount = (record.hoursWorked || 0) > 0; break;
@@ -191,7 +186,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
         entry.sum += valueToAdd;
         if (shouldCount) entry.count++;
       } else {
-        // This case should ideally not be hit if dataMap is pre-populated correctly
         aggregatedData.set(key, { sum: valueToAdd, count: shouldCount ? 1 : 0 });
       }
     });
@@ -226,8 +220,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     });
   }, [records, settings, periodType, getPeriodKey]);
 
-  // O useMemo para periodicData foi movido para baixo para garantir que getDetailedPeriodData esteja definido.
-  // Ele agora é usado para obter os dados agregados por período (semana, mês, ano) para o resumo e seleção.
   const periodicData = useMemo(() => {
     const sortedRecords = [...records].sort((a: RunRecord, b: RunRecord) => new Date(a.date).getTime() - new Date(b.date).getTime());
     const aggregated = sortedRecords.reduce((acc: any, record: RunRecord) => {
@@ -268,15 +260,15 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     result.sort((a: any, b: any) => a.key.localeCompare(b.key));
 
     return result;
-  }, [records, settings, periodType, formatPeriodLabel, getPeriodKey]); // Adicionado formatPeriodLabel e getPeriodKey como dependências
+  }, [records, settings, periodType, formatPeriodLabel, getPeriodKey]);
 
   useEffect(() => {
-    if (periodicData.length > 0 && !selectedPeriodKey) { // Adicionado !selectedPeriodKey para evitar sobrescrever seleção manual
+    if (periodicData.length > 0 && !selectedPeriodKey) {
       setSelectedPeriodKey(periodicData[periodicData.length - 1].key);
     } else if (periodicData.length === 0) {
       setSelectedPeriodKey(null);
     }
-  }, [periodType, periodicData, selectedPeriodKey]); // periodicData como dependência
+  }, [periodType, periodicData, selectedPeriodKey]);
 
   // Dados para Evolução do Lucro Líquido (AreaChart - cumulativo)
   const detailedLucroLiquidoData = useMemo(() => {
@@ -293,37 +285,17 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     return getDetailedPeriodData(records, settings, periodType, selectedPeriodKey, 'cumulative', 'hoursWorked');
   }, [records, settings, periodType, selectedPeriodKey, getDetailedPeriodData]);
 
-  // Dados para Ganhos Brutos vs. Custos Totais (BarChart - soma por sub-período)
-  const detailedGanhosCustosData = useMemo(() => {
-    const ganhosData = getDetailedPeriodData(records, settings, periodType, selectedPeriodKey, 'sum', 'totalEarnings');
-    const custosData = getDetailedPeriodData(records, settings, periodType, selectedPeriodKey, 'sum', 'totalCosts');
-
-    const merged = new Map<string, { name: string; ganhos: number; custos: number }>();
-    ganhosData.forEach((item: { name: string; value: number }) => merged.set(item.name, { name: item.name, ganhos: item.value, custos: 0 }));
-    custosData.forEach((item: { name: string; value: number }) => {
-      const existing = merged.get(item.name);
-      if (existing) {
-        existing.custos = item.value;
-      } else {
-        merged.set(item.name, { name: item.name, ganhos: 0, custos: item.value });
-      }
-    });
-    // Sort by original date key for correct order
-    return Array.from(merged.values()).sort((a, b) => {
-      // Ajuste para ordenar corretamente por data, considerando o formato 'DD/MM' ou 'MMM YY'
-      const parseDate = (name: string) => {
-        if (name.includes('/')) { // DD/MM
-          const [day, month] = name.split('/');
-          return new Date(new Date().getFullYear(), parseInt(month) - 1, parseInt(day));
-        } else { // MMM YY (e.g., Jan 24)
-          const [monthStr, yearStr] = name.split(' ');
-          const monthIndex = new Date(Date.parse(monthStr + " 1, 2000")).getMonth(); // Get month index from string
-          return new Date(2000 + parseInt(yearStr), monthIndex, 1);
-        }
-      };
-      return parseDate(a.name).getTime() - parseDate(b.name).getTime();
-    });
-  }, [records, settings, periodType, selectedPeriodKey, getDetailedPeriodData]);
+  // NOVO: Dados para Ganhos Brutos vs. Custos Totais (BarChart - total do período selecionado)
+  const currentPeriodGanhosCustosData = useMemo(() => {
+    if (!selectedPeriodKey) return [];
+    const item = periodicData.find(p => p.key === selectedPeriodKey);
+    if (!item) return [];
+    return [{
+      name: item.name, // Rótulo do período selecionado (ex: "Semana 01/07", "07/24", "2024")
+      ganhos: item.ganhos,
+      custos: item.custos,
+    }];
+  }, [periodicData, selectedPeriodKey]);
 
   // Dados para Desempenho de Lucro por KM (LineChart - média por sub-período)
   const detailedLucroPorKmData = useMemo(() => {
@@ -737,17 +709,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
      </div>
   );
 
-  // Helper para calcular a mudança percentual
-  const calculateChange = (current: number, previous: number): string => {
-    if (previous === 0) {
-      return current > 0 ? '+∞%' : 'N/A'; // Aumento infinito se o anterior era 0 e o atual é positivo
-    }
-    const change = ((current - previous) / previous) * 100;
-    if (change > 0) return `+${change.toFixed(1)}%`;
-    if (change < 0) return `${change.toFixed(1)}%`;
-    return '0%';
-  };
-
   const renderPeriodicTool = () => {
     const totals = periodicData.reduce((acc: { ganhos: number; custos: number; lucroLiquido: number; kmRodados: number; totalHoursWorked: number; ganhosPorHora: number; lucroLiquidoPorHora: number }, item: any) => {
         acc.ganhos += item.ganhos;
@@ -755,25 +716,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
         acc.lucroLiquido += item.lucroLiquido;
         acc.kmRodados += item.kmRodados;
         acc.totalHoursWorked += item.totalHoursWorked;
-        // Para ganhosPorHora e lucroLiquidoPorHora, a média é mais relevante para o total
-        // Mas para o resumo, vamos somar e depois calcular a média se necessário, ou usar os valores já calculados por período.
-        // Por enquanto, para o resumo geral, manteremos a soma dos totais e calcularemos a média no display se for o caso.
         return acc;
     }, { ganhos: 0, custos: 0, lucroLiquido: 0, kmRodados: 0, totalHoursWorked: 0, ganhosPorHora: 0, lucroLiquidoPorHora: 0 });
-
-    // Comparação de Períodos
-    const lastPeriodData = periodicData.length > 0 ? periodicData[periodicData.length - 1] : null;
-    const previousPeriodData = periodicData.length > 1 ? periodicData[periodicData.length - 2] : null;
-
-    const comparisonMetrics = [
-      { label: 'Lucro Líquido', current: lastPeriodData?.lucroLiquido, previous: previousPeriodData?.lucroLiquido, unit: 'R$' },
-      { label: 'Ganhos Brutos', current: lastPeriodData?.ganhos, previous: previousPeriodData?.ganhos, unit: 'R$' },
-      { label: 'Custos Totais', current: lastPeriodData?.custos, previous: previousPeriodData?.custos, unit: 'R$' },
-      { label: 'KM Rodados', current: lastPeriodData?.kmRodados, previous: previousPeriodData?.kmRodados, unit: 'KM' },
-      { label: 'Horas Trabalhadas', current: lastPeriodData?.totalHoursWorked, previous: previousPeriodData?.totalHoursWorked, unit: 'h' },
-      { label: 'Ganhos por Hora', current: lastPeriodData?.ganhosPorHora, previous: previousPeriodData?.ganhosPorHora, unit: 'R$/h' },
-      { label: 'Lucro por Hora', current: lastPeriodData?.lucroLiquidoPorHora, previous: previousPeriodData?.lucroLiquidoPorHora, unit: 'R$/h' },
-    ];
 
     const tooltipContentStyle = { backgroundColor: '#1f2937', border: '1px solid #4a5568', color: '#f9fafb' };
     const tooltipLabelStyle = { color: '#10b981' };
@@ -810,34 +754,15 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-purple-400">Horas</p><p className="font-bold text-sm text-purple-400">{totals.totalHoursWorked.toFixed(1)} h</p></div>
                 </div>
 
-                {/* Novo: Resumo de Comparação de Períodos */}
-                {previousPeriodData && lastPeriodData && (
-                  <div className="bg-gray-800 p-4 rounded-lg shadow-xl mb-6 animate-fade-in-up">
-                    <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">
-                      Comparação: {lastPeriodData.name} vs {previousPeriodData.name}
-                    </h3>
-                    <div className="grid grid-cols-2 gap-3 text-center">
-                      {comparisonMetrics.map((metric, index) => (
-                        <div key={index} className="bg-gray-700/50 p-2 rounded-lg">
-                          <p className="text-xs text-gray-400 mb-1">{metric.label}</p>
-                          <p className={`font-bold text-sm ${
-                            (metric.current || 0) >= (metric.previous || 0) ? 'text-green-400' : 'text-red-400'
-                          }`}>
-                            {calculateChange(metric.current || 0, metric.previous || 0)}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* REMOVIDO: Seção de Comparação de Períodos */}
 
                 <div className="space-y-6">
-                    {/* Graph 1: Ganhos Brutos vs. Custos Totais (BarChart) */}
+                    {/* Graph 1: Ganhos Brutos vs. Custos Totais (BarChart - Total do Período) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Ganhos Brutos vs. Custos Totais</h3>
                         <div className="w-full h-60">
                             <ResponsiveContainer>
-                                <BarChart data={detailedGanhosCustosData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                <BarChart data={currentPeriodGanhosCustosData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <defs>
                                         <linearGradient id="gradientGanhos" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/> {/* blue-600 */}
@@ -866,7 +791,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                      {/* Graph 2: Evolução do Lucro Líquido (AreaChart) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Evolução do Lucro Líquido</h3>
-                        {periodicData.length > 0 && (
+                        {detailedLucroLiquidoData.length > 0 && (
                           <div className="mb-4">
                             <label htmlFor="period-select" className="sr-only">Selecionar Período</label>
                             <select
