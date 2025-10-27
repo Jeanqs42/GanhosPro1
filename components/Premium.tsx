@@ -145,10 +145,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
   useEffect(() => {
     if (availablePeriods.length > 0) {
       setSelectedPeriodKey(availablePeriods[availablePeriods.length - 1].key);
-      console.log('[Premium] Default selectedPeriodKey set to:', availablePeriods[availablePeriods.length - 1].key);
     } else {
       setSelectedPeriodKey(null);
-      console.log('[Premium] No available periods, selectedPeriodKey set to null.');
     }
   }, [periodType, availablePeriods]); // Depende de periodType e availablePeriods
 
@@ -161,15 +159,12 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     metricType: 'cumulative' | 'average' | 'sum', // 'sum' para somar valores por sub-período
     metricKey: 'netProfit' | 'kmDriven' | 'hoursWorked' | 'profitPerKm' | 'ganhosPorHora' | 'lucroLiquidoPorHora' | 'ganhosPorKmBruto' | 'margemLucro' | 'totalEarnings' | 'totalCosts'
   ) => {
-    console.log(`[getDetailedPeriodData] Called with: periodType=${periodType}, selectedPeriodKey=${selectedPeriodKey}, metricKey=${metricKey}, metricType=${metricType}`);
-    if (!selectedPeriodKey) {
-      console.log('[getDetailedPeriodData] No selectedPeriodKey, returning empty array.');
+    if (!selectedPeriodKey || selectedPeriodKey.trim() === '') { // Adicionado: Verificação para string vazia
       return [];
     }
 
     const filteredRecords = records.filter((r: RunRecord) => getPeriodKey(r.date, periodType) === selectedPeriodKey)
                                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    console.log(`[getDetailedPeriodData] Filtered records count for ${selectedPeriodKey}: ${filteredRecords.length}`);
 
     const aggregatedData = new Map<string, { sum: number; count: number; }>();
 
@@ -180,21 +175,41 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     // Determine aggregation unit and date range for initialization
     if (periodType === 'weekly') {
       aggregationUnit = 'day';
-      subPeriodStartDate = new Date(selectedPeriodKey.substring(1)); // e.g., '2024-07-01' from 'W2024-07-01'
+      const dateStringForStartDate = selectedPeriodKey.substring(1);
+      subPeriodStartDate = new Date(dateStringForStartDate);
+      if (isNaN(subPeriodStartDate.getTime())) { // Adicionado: Validação de data
+        return [];
+      }
       subPeriodEndDate = new Date(subPeriodStartDate);
       subPeriodEndDate.setDate(subPeriodStartDate.getDate() + 6);
+      if (isNaN(subPeriodEndDate.getTime())) { // Adicionado: Validação de data
+        return [];
+      }
     } else if (periodType === 'monthly') {
       aggregationUnit = 'week';
-      const [year, month] = selectedPeriodKey.split('-').map(Number);
+      const [yearStr, monthStr] = selectedPeriodKey.split('-');
+      const year = Number(yearStr);
+      const month = Number(monthStr);
+      if (isNaN(year) || isNaN(month)) {
+        return [];
+      }
       subPeriodStartDate = new Date(year, month - 1, 1); // First day of the month
       subPeriodEndDate = new Date(year, month, 0); // Last day of the month
+      if (isNaN(subPeriodStartDate.getTime()) || isNaN(subPeriodEndDate.getTime())) { // Adicionado: Validação de data
+        return [];
+      }
     } else { // annual
       aggregationUnit = 'month';
       const year = Number(selectedPeriodKey);
+      if (isNaN(year)) {
+        return [];
+      }
       subPeriodStartDate = new Date(year, 0, 1); // First day of the year
       subPeriodEndDate = new Date(year, 11, 31); // Last day of the year
+      if (isNaN(subPeriodStartDate.getTime()) || isNaN(subPeriodEndDate.getTime())) { // Adicionado: Validação de data
+        return [];
+      }
     }
-    console.log(`[getDetailedPeriodData] Aggregation Unit: ${aggregationUnit}, Sub-period Start: ${subPeriodStartDate.toISOString().split('T')[0]}, End: ${subPeriodEndDate.toISOString().split('T')[0]}`);
 
     // Initialize map with all sub-periods
     if (aggregationUnit === 'day') {
@@ -215,7 +230,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
         aggregatedData.set(monthKey, { sum: 0, count: 0 });
       }
     }
-    console.log(`[getDetailedPeriodData] Initialized aggregatedData map with ${aggregatedData.size} entries for aggregationUnit: ${aggregationUnit}.`);
 
     filteredRecords.forEach(record => {
       const carCost = record.kmDriven * settings.costPerKm;
@@ -282,13 +296,11 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       } else { // aggregationUnit === 'month'
         nameLabel = formatPeriodLabel(key, 'monthly');
       }
-      console.log(`[getDetailedPeriodData] Key: ${key}, Label: ${nameLabel}, Value: ${displayValue}`);
       return {
         name: nameLabel,
         value: parseFloat(displayValue.toFixed(2)),
       };
     });
-    console.log(`[getDetailedPeriodData] Final data length: ${finalData.length}`);
     return finalData;
   }, [records, settings, periodType, getPeriodKey, formatPeriodLabel]);
 
@@ -713,9 +725,9 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                 labelStyle={{ color: '#10b981' }}
                                 formatter={(value: number) => {
                                     const unit = metricsInfo[reportConfig.metric].unit;
-                                    if (unit === 'KM') return [`${Number(value).toFixed(1)} KM`, metricsInfo[reportConfig.metric].label];
-                                    if (unit === 'h') return [`${Number(value).toFixed(1)} h`, metricsInfo[reportConfig.metric].label];
-                                    return [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, metricsInfo[reportConfig.metric].label];
+                                    if (unit === 'KM') return `${Number(value).toFixed(1)} KM`;
+                                    if (unit === 'h') return `${Number(value).toFixed(1)} h`;
+                                    return `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`;
                                 }}
                              />
                             <Bar dataKey="value" fill="#10b981" activeBar={false} />
@@ -788,7 +800,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         const periodMap: Record<'Semanal' | 'Mensal' | 'Anual', PeriodType> = { Semanal: 'weekly', Mensal: 'monthly', Anual: 'annual' };
                         const value = periodMap[p];
                         return (
-                             <button key={p} onClick={() => { setPeriodType(value); console.log('[Premium] Period type changed to:', value); }} aria-label={`Selecionar análise ${p.toLowerCase()}`} className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${periodType === value ? 'bg-brand-primary text-white shadow' : 'text-gray-300 hover:bg-gray-600'}`}>
+                             <button key={p} onClick={() => setPeriodType(value)} aria-label={`Selecionar análise ${p.toLowerCase()}`} className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${periodType === value ? 'bg-brand-primary text-white shadow' : 'text-gray-300 hover:bg-gray-600'}`}>
                                 {p}
                             </button>
                         )
@@ -801,7 +813,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <select
                             id="period-select"
                             value={selectedPeriodKey || ''}
-                            onChange={(e) => { setSelectedPeriodKey(e.target.value); console.log('[Premium] Selected period key changed to:', e.target.value); }}
+                            onChange={(e) => setSelectedPeriodKey(e.target.value)}
                             className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none"
                         >
                             {availablePeriods.map(p => (
@@ -821,229 +833,229 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                     <p className="mt-2">Não há registros suficientes para gerar uma análise {periodType} ou o período selecionado.</p>
                 </div>
             ) : (
-                <>
-                <div className="grid grid-cols-4 gap-2 mb-4 text-center">
-                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-blue-400">Ganhos</p><p className="font-bold text-sm text-blue-400">{totals.ganhos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
-                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-yellow-400">Custos</p><p className="font-bold text-sm text-yellow-400">{totals.custos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
-                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-green-400">Lucro</p><p className="font-bold text-sm text-green-400">{totals.lucroLiquido.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
-                    <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-purple-400">Horas</p><p className="font-bold text-sm text-purple-400">{totals.totalHoursWorked.toFixed(1)} h</p></div>
+                <div> {/* Adicionado um div wrapper para os múltiplos elementos */}
+                    <div className="grid grid-cols-4 gap-2 mb-4 text-center">
+                        <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-blue-400">Ganhos</p><p className="font-bold text-sm text-blue-400">{totals.ganhos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
+                        <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-yellow-400">Custos</p><p className="font-bold text-sm text-yellow-400">{totals.custos.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
+                        <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-green-400">Lucro</p><p className="font-bold text-sm text-green-400">{totals.lucroLiquido.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
+                        <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-purple-400">Horas</p><p className="font-bold text-sm text-purple-400">{totals.totalHoursWorked.toFixed(1)} h</p></div>
+                    </div>
+
+                    <div className="space-y-6">
+                        {/* Graph 1: Ganhos Brutos vs. Custos Totais (BarChart - Total do Período) */}
+                        <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
+                            <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Ganhos Brutos vs. Custos Totais</h3>
+                            <div className="w-full h-60">
+                                <ResponsiveContainer>
+                                    <BarChart data={currentPeriodGanhosCustosData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                        <defs>
+                                            <linearGradient id="gradientGanhos" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/> {/* blue-600 */}
+                                                <stop offset="95%" stopColor="#2563eb" stopOpacity={0.3}/>
+                                            </linearGradient>
+                                            <linearGradient id="gradientCustos" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/> {/* amber-500 */}
+                                                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
+                                        <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
+                                        <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                        <Tooltip 
+                                            contentStyle={tooltipContentStyle}
+                                            labelStyle={tooltipLabelStyle}
+                                            formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} 
+                                        />
+                                        <Legend wrapperStyle={{fontSize: "12px"}}/>
+                                        <Bar dataKey="ganhos" fill="url(#gradientGanhos)" name="Ganhos" activeBar={false} />
+                                        <Bar dataKey="custos" fill="url(#gradientCustos)" name="Custos" activeBar={false} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                        {/* Graph 2: Evolução do Lucro Líquido (AreaChart) */}
+                        <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
+                            <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Evolução do Lucro Líquido</h3>
+                            <div className="w-full h-60">
+                                <ResponsiveContainer>
+                                    <AreaChart data={detailedLucroLiquidoData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                        <defs>
+                                            <linearGradient id="colorLucro" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/> {/* brand-primary */}
+                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                            </linearGradient>
+                                            <linearGradient id="colorPrejuizo" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/> {/* red-500 */}
+                                                <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
+                                        <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
+                                        <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                        <Tooltip 
+                                            contentStyle={tooltipContentStyle}
+                                            labelStyle={tooltipLabelStyle}
+                                            formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} 
+                                        />
+                                        <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" />
+                                        <Area type="monotone" dataKey="value" stroke="#10b981" fillOpacity={1} fill="url(#colorLucro)" name="Lucro Líquido" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                        {/* Graph 3: Desempenho de Lucro por KM (R$) (LineChart) */}
+                        <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
+                            <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Desempenho de Lucro por KM (R$)</h3>
+                            <div className="w-full h-60">
+                                <ResponsiveContainer>
+                                    <LineChart data={detailedLucroPorKmData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
+                                        <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
+                                        <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                        <Tooltip 
+                                            contentStyle={tooltipContentStyle}
+                                            labelStyle={tooltipLabelStyle}
+                                            formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/KM`} 
+                                        />
+                                        <Line type="monotone" dataKey="value" name="Lucro/KM" stroke="#8b5cf6" activeDot={{ r: 6 }} /> {/* violet-500 */}
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Graph 4: KM Rodados (AreaChart) */}
+                        <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
+                            <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">KM Rodados</h3>
+                            <div className="w-full h-60">
+                                <ResponsiveContainer>
+                                    <AreaChart data={cumulativeKmData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                        <defs>
+                                            <linearGradient id="gradientKm" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.8}/> {/* cyan-500 */}
+                                                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.3}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
+                                        <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
+                                        <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value} KM`} />
+                                        <Tooltip 
+                                            contentStyle={tooltipContentStyle}
+                                            labelStyle={tooltipLabelStyle}
+                                            formatter={(value: number) => `${Number(value).toFixed(1)} KM`} 
+                                        />
+                                        <Area type="monotone" dataKey="value" name="KM" stroke="#06b6d4" fill="url(#gradientKm)" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Graph 5: Total de Horas Trabalhadas (AreaChart) */}
+                        <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
+                            <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Total de Horas Trabalhadas</h3>
+                            <div className="w-full h-60">
+                                <ResponsiveContainer>
+                                    <AreaChart data={cumulativeHoursData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                        <defs>
+                                            <linearGradient id="gradientHoras" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#a855f7" stopOpacity={0.8}/> {/* fuchsia-500 */}
+                                                <stop offset="95%" stopColor="#a855f7" stopOpacity={0.3}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
+                                        <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
+                                        <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value} h`} />
+                                        <Tooltip 
+                                            contentStyle={tooltipContentStyle}
+                                            labelStyle={tooltipLabelStyle}
+                                            formatter={(value: number) => `${Number(value).toFixed(1)} h`} 
+                                        />
+                                        <Area type="monotone" dataKey="value" name="Horas" stroke="#a855f7" fill="url(#gradientHoras)" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Graph 6: Ganhos por Hora (R$/h) (LineChart) */}
+                        <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
+                            <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Ganhos por Hora (R$/h)</h3>
+                            <div className="w-full h-60">
+                                <ResponsiveContainer>
+                                    <LineChart data={detailedGanhosPorHoraData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
+                                        <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
+                                        <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `R$${value}`} />
+                                        <Tooltip 
+                                            contentStyle={tooltipContentStyle}
+                                            labelStyle={tooltipLabelStyle}
+                                            formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h`} 
+                                        />
+                                        <Line type="monotone" dataKey="value" name="Ganhos/h" stroke="#0ea5e9" activeDot={{ r: 6 }} /> {/* sky-500 */}
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Graph 7: Lucro Líquido por Hora (R$/h) (LineChart) */}
+                        <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
+                            <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Lucro Líquido por Hora (R$/h)</h3>
+                            <div className="w-full h-60">
+                                <ResponsiveContainer>
+                                    <LineChart data={detailedLucroLiquidoPorHoraData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
+                                        <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
+                                        <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `R$${value}`} />
+                                        <Tooltip 
+                                            contentStyle={tooltipContentStyle}
+                                            labelStyle={tooltipLabelStyle}
+                                            formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h`} 
+                                        />
+                                        <Line type="monotone" dataKey="value" name="Lucro Líquido/h" stroke="#f97316" activeDot={{ r: 6 }} /> {/* orange-500 */}
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Graph 8: R$/KM Bruto (LineChart) */}
+                        <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
+                            <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">R$/KM Bruto</h3>
+                            <div className="w-full h-60">
+                                <ResponsiveContainer>
+                                    <LineChart data={detailedGanhosPorKmBrutoData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
+                                        <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
+                                        <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
+                                        <Tooltip 
+                                            contentStyle={tooltipContentStyle}
+                                            labelStyle={tooltipLabelStyle}
+                                            formatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/KM`} 
+                                        />
+                                        <Line type="monotone" dataKey="value" name="R$/KM Bruto" stroke="#22c55e" activeDot={{ r: 6 }} /> {/* emerald-500 */}
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Graph 9: Margem de Lucro (%) (LineChart) */}
+                        <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
+                            <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Margem de Lucro (%)</h3>
+                            <div className="w-full h-60">
+                                <ResponsiveContainer>
+                                    <LineChart data={detailedMargemLucroData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
+                                        <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
+                                        <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value}%`} />
+                                        <Tooltip 
+                                            contentStyle={tooltipContentStyle}
+                                            labelStyle={tooltipLabelStyle}
+                                            formatter={(value: number) => `${Number(value).toFixed(1)}%`} 
+                                        />
+                                        <Line type="monotone" dataKey="value" name="Margem %" stroke="#e11d48" activeDot={{ r: 6 }} /> {/* rose-600 */}
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-
-                <div className="space-y-6">
-                    {/* Graph 1: Ganhos Brutos vs. Custos Totais (BarChart - Total do Período) */}
-                    <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
-                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Ganhos Brutos vs. Custos Totais</h3>
-                        <div className="w-full h-60">
-                            <ResponsiveContainer>
-                                <BarChart data={currentPeriodGanhosCustosData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <defs>
-                                        <linearGradient id="gradientGanhos" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/> {/* blue-600 */}
-                                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.3}/>
-                                        </linearGradient>
-                                        <linearGradient id="gradientCustos" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/> {/* amber-500 */}
-                                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.3}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
-                                    <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
-                                    <Tooltip 
-                                        contentStyle={tooltipContentStyle}
-                                        labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number, name: string) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, name === 'ganhos' ? 'Ganhos' : 'Custos']} 
-                                    />
-                                    <Legend wrapperStyle={{fontSize: "12px"}}/>
-                                    <Bar dataKey="ganhos" fill="url(#gradientGanhos)" name="Ganhos" activeBar={false} />
-                                    <Bar dataKey="custos" fill="url(#gradientCustos)" name="Custos" activeBar={false} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                     {/* Graph 2: Evolução do Lucro Líquido (AreaChart) */}
-                    <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
-                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Evolução do Lucro Líquido</h3>
-                        <div className="w-full h-60">
-                            <ResponsiveContainer>
-                                <AreaChart data={detailedLucroLiquidoData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <defs>
-                                        <linearGradient id="colorLucro" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/> {/* brand-primary */}
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                                        </linearGradient>
-                                        <linearGradient id="colorPrejuizo" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/> {/* red-500 */}
-                                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
-                                    <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
-                                    <Tooltip 
-                                        contentStyle={tooltipContentStyle}
-                                        labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`, 'Lucro Líquido Acumulado']} 
-                                    />
-                                    <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" />
-                                    <Area type="monotone" dataKey="value" stroke="#10b981" fillOpacity={1} fill="url(#colorLucro)" name="Lucro Líquido" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                     {/* Graph 3: Desempenho de Lucro por KM (R$) (LineChart) */}
-                    <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
-                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Desempenho de Lucro por KM (R$)</h3>
-                        <div className="w-full h-60">
-                           <ResponsiveContainer>
-                                <LineChart data={detailedLucroPorKmData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
-                                    <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
-                                    <Tooltip 
-                                        contentStyle={tooltipContentStyle}
-                                        labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/KM`, 'Lucro/KM']} 
-                                    />
-                                    <Line type="monotone" dataKey="value" name="Lucro/KM" stroke="#8b5cf6" activeDot={{ r: 6 }} /> {/* violet-500 */}
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* Graph 4: KM Rodados (AreaChart) */}
-                    <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
-                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">KM Rodados</h3>
-                        <div className="w-full h-60">
-                           <ResponsiveContainer>
-                                <AreaChart data={cumulativeKmData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <defs>
-                                        <linearGradient id="gradientKm" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.8}/> {/* cyan-500 */}
-                                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.3}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
-                                    <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value} KM`} />
-                                    <Tooltip 
-                                        contentStyle={tooltipContentStyle}
-                                        labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toFixed(1)} KM`, 'KM Rodados Acumulados']} 
-                                    />
-                                    <Area type="monotone" dataKey="value" name="KM" stroke="#06b6d4" fill="url(#gradientKm)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* Graph 5: Total de Horas Trabalhadas (AreaChart) */}
-                    <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
-                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Total de Horas Trabalhadas</h3>
-                        <div className="w-full h-60">
-                           <ResponsiveContainer>
-                                <AreaChart data={cumulativeHoursData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <defs>
-                                        <linearGradient id="gradientHoras" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#a855f7" stopOpacity={0.8}/> {/* fuchsia-500 */}
-                                            <stop offset="95%" stopColor="#a855f7" stopOpacity={0.3}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
-                                    <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value} h`} />
-                                    <Tooltip 
-                                        contentStyle={tooltipContentStyle}
-                                        labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toFixed(1)} h`, 'Horas Trabalhadas Acumuladas']} 
-                                    />
-                                    <Area type="monotone" dataKey="value" name="Horas" stroke="#a855f7" fill="url(#gradientHoras)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* Graph 6: Ganhos por Hora (R$/h) (LineChart) */}
-                    <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
-                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Ganhos por Hora (R$/h)</h3>
-                        <div className="w-full h-60">
-                           <ResponsiveContainer>
-                                <LineChart data={detailedGanhosPorHoraData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
-                                    <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `R$${value}`} />
-                                    <Tooltip 
-                                        contentStyle={tooltipContentStyle}
-                                        labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h`, 'Ganhos por Hora']} 
-                                    />
-                                    <Line type="monotone" dataKey="value" name="Ganhos/h" stroke="#0ea5e9" activeDot={{ r: 6 }} /> {/* sky-500 */}
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* Graph 7: Lucro Líquido por Hora (R$/h) (LineChart) */}
-                    <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
-                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Lucro Líquido por Hora (R$/h)</h3>
-                        <div className="w-full h-60">
-                           <ResponsiveContainer>
-                                <LineChart data={detailedLucroLiquidoPorHoraData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
-                                    <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `R$${value}`} />
-                                    <Tooltip 
-                                        contentStyle={tooltipContentStyle}
-                                        labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h`, 'Lucro Líquido por Hora']} 
-                                    />
-                                    <Line type="monotone" dataKey="value" name="Lucro Líquido/h" stroke="#f97316" activeDot={{ r: 6 }} /> {/* orange-500 */}
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* Graph 8: R$/KM Bruto (LineChart) */}
-                    <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
-                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">R$/KM Bruto</h3>
-                        <div className="w-full h-60">
-                           <ResponsiveContainer>
-                                <LineChart data={detailedGanhosPorKmBrutoData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
-                                    <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
-                                    <Tooltip 
-                                        contentStyle={tooltipContentStyle}
-                                        labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/KM`, 'R$/KM Bruto']} 
-                                    />
-                                    <Line type="monotone" dataKey="value" name="R$/KM Bruto" stroke="#22c55e" activeDot={{ r: 6 }} /> {/* emerald-500 */}
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* Graph 9: Margem de Lucro (%) (LineChart) */}
-                    <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
-                        <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Margem de Lucro (%)</h3>
-                        <div className="w-full h-60">
-                           <ResponsiveContainer>
-                                <LineChart data={detailedMargemLucroData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
-                                    <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
-                                    <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value}%`} />
-                                    <Tooltip 
-                                        contentStyle={tooltipContentStyle}
-                                        labelStyle={tooltipLabelStyle}
-                                        formatter={(value: number) => [`${Number(value).toFixed(1)}%`, 'Margem de Lucro']} 
-                                    />
-                                    <Line type="monotone" dataKey="value" name="Margem %" stroke="#e11d48" activeDot={{ r: 6 }} /> {/* rose-600 */}
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-                </>
             )}
         </div>
     );
