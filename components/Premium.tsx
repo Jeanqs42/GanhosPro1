@@ -124,7 +124,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     const sortedRecords = [...records].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     sortedRecords.forEach(record => {
-      // const date = new Date(record.date); // REMOVIDO: Variável 'date' não utilizada
       if (periodType === 'weekly') {
         const key = getPeriodKey(record.date, 'weekly');
         periodsMap.set(key, formatPeriodLabel(key, 'weekly'));
@@ -146,8 +145,10 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
   useEffect(() => {
     if (availablePeriods.length > 0) {
       setSelectedPeriodKey(availablePeriods[availablePeriods.length - 1].key);
+      console.log('[Premium] Default selectedPeriodKey set to:', availablePeriods[availablePeriods.length - 1].key);
     } else {
       setSelectedPeriodKey(null);
+      console.log('[Premium] No available periods, selectedPeriodKey set to null.');
     }
   }, [periodType, availablePeriods]); // Depende de periodType e availablePeriods
 
@@ -160,10 +161,15 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     metricType: 'cumulative' | 'average' | 'sum', // 'sum' para somar valores por sub-período
     metricKey: 'netProfit' | 'kmDriven' | 'hoursWorked' | 'profitPerKm' | 'ganhosPorHora' | 'lucroLiquidoPorHora' | 'ganhosPorKmBruto' | 'margemLucro' | 'totalEarnings' | 'totalCosts'
   ) => {
-    if (!selectedPeriodKey) return [];
+    console.log(`[getDetailedPeriodData] Called with: periodType=${periodType}, selectedPeriodKey=${selectedPeriodKey}, metricKey=${metricKey}, metricType=${metricType}`);
+    if (!selectedPeriodKey) {
+      console.log('[getDetailedPeriodData] No selectedPeriodKey, returning empty array.');
+      return [];
+    }
 
     const filteredRecords = records.filter((r: RunRecord) => getPeriodKey(r.date, periodType) === selectedPeriodKey)
                                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    console.log(`[getDetailedPeriodData] Filtered records count for ${selectedPeriodKey}: ${filteredRecords.length}`);
 
     const aggregatedData = new Map<string, { sum: number; count: number; }>();
 
@@ -188,6 +194,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       subPeriodStartDate = new Date(year, 0, 1); // First day of the year
       subPeriodEndDate = new Date(year, 11, 31); // Last day of the year
     }
+    console.log(`[getDetailedPeriodData] Aggregation Unit: ${aggregationUnit}, Sub-period Start: ${subPeriodStartDate.toISOString().split('T')[0]}, End: ${subPeriodEndDate.toISOString().split('T')[0]}`);
 
     // Initialize map with all sub-periods
     if (aggregationUnit === 'day') {
@@ -208,6 +215,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
         aggregatedData.set(monthKey, { sum: 0, count: 0 });
       }
     }
+    console.log(`[getDetailedPeriodData] Initialized aggregatedData map with ${aggregatedData.size} entries for aggregationUnit: ${aggregationUnit}.`);
 
     filteredRecords.forEach(record => {
       const carCost = record.kmDriven * settings.costPerKm;
@@ -253,7 +261,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     const sortedKeys = Array.from(aggregatedData.keys()).sort((a, b) => new Date(a.replace('W', '')).getTime() - new Date(b.replace('W', '')).getTime());
 
     let cumulativeTracker = 0;
-    return sortedKeys.map(key => {
+    const finalData = sortedKeys.map(key => {
       const item = aggregatedData.get(key)!;
       let displayValue: number;
 
@@ -274,12 +282,14 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       } else { // aggregationUnit === 'month'
         nameLabel = formatPeriodLabel(key, 'monthly');
       }
-
+      console.log(`[getDetailedPeriodData] Key: ${key}, Label: ${nameLabel}, Value: ${displayValue}`);
       return {
         name: nameLabel,
         value: parseFloat(displayValue.toFixed(2)),
       };
     });
+    console.log(`[getDetailedPeriodData] Final data length: ${finalData.length}`);
+    return finalData;
   }, [records, settings, periodType, getPeriodKey, formatPeriodLabel]);
 
   const periodicData = useMemo(() => {
@@ -778,7 +788,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         const periodMap: Record<'Semanal' | 'Mensal' | 'Anual', PeriodType> = { Semanal: 'weekly', Mensal: 'monthly', Anual: 'annual' };
                         const value = periodMap[p];
                         return (
-                             <button key={p} onClick={() => setPeriodType(value)} aria-label={`Selecionar análise ${p.toLowerCase()}`} className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${periodType === value ? 'bg-brand-primary text-white shadow' : 'text-gray-300 hover:bg-gray-600'}`}>
+                             <button key={p} onClick={() => { setPeriodType(value); console.log('[Premium] Period type changed to:', value); }} aria-label={`Selecionar análise ${p.toLowerCase()}`} className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${periodType === value ? 'bg-brand-primary text-white shadow' : 'text-gray-300 hover:bg-gray-600'}`}>
                                 {p}
                             </button>
                         )
@@ -791,7 +801,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         <select
                             id="period-select"
                             value={selectedPeriodKey || ''}
-                            onChange={(e) => setSelectedPeriodKey(e.target.value)}
+                            onChange={(e) => { setSelectedPeriodKey(e.target.value); console.log('[Premium] Selected period key changed to:', e.target.value); }}
                             className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none"
                         >
                             {availablePeriods.map(p => (
