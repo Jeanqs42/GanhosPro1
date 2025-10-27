@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Crown, Zap, BarChart2, Unlock, Loader2, MessageSquare, ArrowLeft, BrainCircuit, CalendarDays, Calculator, FileBarChart2, User, Bot } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, AreaChart, Area, ReferenceLine } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, AreaChart, Area, ReferenceLine, LineChart, Line } from 'recharts';
 import { RunRecord, AppSettings } from '../types';
 import { analyzeRecords, getChatFollowUp, getIntelligentReportAnalysis } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
@@ -791,7 +791,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                 )}
 
                 <div className="space-y-6">
-                    {/* Graph 1: Ganhos Brutos vs. Custos Totais */}
+                    {/* Graph 1: Ganhos Brutos vs. Custos Totais (BarChart) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Ganhos Brutos vs. Custos Totais</h3>
                         <div className="w-full h-60">
@@ -869,18 +869,12 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                             </ResponsiveContainer>
                         </div>
                     </div>
-                     {/* Graph 3: Desempenho de Lucro por KM (R$) */}
+                     {/* Graph 3: Desempenho de Lucro por KM (R$) (LineChart) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Desempenho de Lucro por KM (R$)</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <defs>
-                                        <linearGradient id="gradientLucroKm" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/> {/* violet-500 */}
-                                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                                        </linearGradient>
-                                    </defs>
+                                <LineChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
@@ -889,13 +883,13 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/KM`, 'Lucro/KM']} 
                                     />
-                                    <Area type="monotone" dataKey="lucroPorKm" name="Lucro/KM" stroke="#8b5cf6" fill="url(#gradientLucroKm)" />
-                                </AreaChart>
+                                    <Line type="monotone" dataKey="lucroPorKm" name="Lucro/KM" stroke="#8b5cf6" activeDot={{ r: 6 }} /> {/* violet-500 */}
+                                </LineChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
-                    {/* Graph 4: KM Rodados */}
+                    {/* Graph 4: KM Rodados (AreaChart) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">KM Rodados</h3>
                         <div className="w-full h-60">
@@ -921,7 +915,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         </div>
                     </div>
 
-                    {/* Graph 5: Total de Horas Trabalhadas */}
+                    {/* Graph 5: Total de Horas Trabalhadas (AreaChart) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Total de Horas Trabalhadas</h3>
                         <div className="w-full h-60">
@@ -947,18 +941,12 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         </div>
                     </div>
 
-                    {/* Graph 6: Ganhos por Hora */}
+                    {/* Graph 6: Ganhos por Hora (R$/h) (LineChart) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Ganhos por Hora (R$/h)</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <defs>
-                                        <linearGradient id="gradientGanhosPorHora" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.8}/> {/* sky-500 */}
-                                            <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0.3}/>
-                                        </linearGradient>
-                                    </defs>
+                                <LineChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `R$${value}`} />
@@ -967,24 +955,18 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h`, 'Ganhos por Hora']} 
                                     />
-                                    <Area type="monotone" dataKey="ganhosPorHora" name="Ganhos/h" stroke="#0ea5e9" fill="url(#gradientGanhosPorHora)" />
-                                </AreaChart>
+                                    <Line type="monotone" dataKey="ganhosPorHora" name="Ganhos/h" stroke="#0ea5e9" activeDot={{ r: 6 }} /> {/* sky-500 */}
+                                </LineChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
-                    {/* Graph 7: Lucro Líquido por Hora */}
+                    {/* Graph 7: Lucro Líquido por Hora (R$/h) (LineChart) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Lucro Líquido por Hora (R$/h)</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <defs>
-                                        <linearGradient id="gradientLucroLiquidoPorHora" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/> {/* orange-500 */}
-                                            <stop offset="95%" stopColor="#f97316" stopOpacity={0.3}/>
-                                        </linearGradient>
-                                    </defs>
+                                <LineChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `R$${value}`} />
@@ -993,24 +975,18 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/h`, 'Lucro Líquido por Hora']} 
                                     />
-                                    <Area type="monotone" dataKey="lucroLiquidoPorHora" name="Lucro Líquido/h" stroke="#f97316" fill="url(#gradientLucroLiquidoPorHora)" />
-                                </AreaChart>
+                                    <Line type="monotone" dataKey="lucroLiquidoPorHora" name="Lucro Líquido/h" stroke="#f97316" activeDot={{ r: 6 }} /> {/* orange-500 */}
+                                </LineChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
-                    {/* Graph 8: R$/KM Bruto (antigo 6) */}
+                    {/* Graph 8: R$/KM Bruto (LineChart) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">R$/KM Bruto</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <defs>
-                                        <linearGradient id="gradientGanhosKmBruto" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/> {/* emerald-500 */}
-                                            <stop offset="95%" stopColor="#22c55e" stopOpacity={0.3}/>
-                                        </linearGradient>
-                                    </defs>
+                                <LineChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}`} />
@@ -1019,24 +995,18 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'})}/KM`, 'R$/KM Bruto']} 
                                     />
-                                    <Area type="monotone" dataKey="ganhosPorKmBruto" name="R$/KM Bruto" stroke="#22c55e" fill="url(#gradientGanhosKmBruto)" />
-                                </AreaChart>
+                                    <Line type="monotone" dataKey="ganhosPorKmBruto" name="R$/KM Bruto" stroke="#22c55e" activeDot={{ r: 6 }} /> {/* emerald-500 */}
+                                </LineChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
-                    {/* Graph 9: Margem de Lucro (%) (antigo 7) */}
+                    {/* Graph 9: Margem de Lucro (%) (LineChart) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Margem de Lucro (%)</h3>
                         <div className="w-full h-60">
                            <ResponsiveContainer>
-                                <AreaChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                                    <defs>
-                                        <linearGradient id="gradientMargem" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#e11d48" stopOpacity={0.8}/> {/* rose-600 */}
-                                            <stop offset="95%" stopColor="#e11d48" stopOpacity={0.3}/>
-                                        </linearGradient>
-                                    </defs>
+                                <LineChart data={periodicData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                                     <XAxis dataKey="name" stroke="#a0aec0" fontSize={11} />
                                     <YAxis stroke="#a0aec0" fontSize={11} tickFormatter={(value: number) => `${value}%`} />
@@ -1045,8 +1015,8 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                                         labelStyle={tooltipLabelStyle}
                                         formatter={(value: number) => [`${Number(value).toFixed(1)}%`, 'Margem de Lucro']} 
                                     />
-                                    <Area type="monotone" dataKey="margemLucro" name="Margem %" stroke="#e11d48" fill="url(#gradientMargem)" />
-                                </AreaChart>
+                                    <Line type="monotone" dataKey="margemLucro" name="Margem %" stroke="#e11d48" activeDot={{ r: 6 }} /> {/* rose-600 */}
+                                </LineChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
