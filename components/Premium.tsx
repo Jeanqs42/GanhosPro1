@@ -118,6 +118,39 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     }
   };
 
+  // Função para gerar a lista de períodos disponíveis (semanas, meses, anos)
+  const availablePeriods = useMemo(() => {
+    const periodsMap = new Map<string, string>(); // key -> label
+    const sortedRecords = [...records].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    sortedRecords.forEach(record => {
+      // const date = new Date(record.date); // REMOVIDO: Variável 'date' não utilizada
+      if (periodType === 'weekly') {
+        const key = getPeriodKey(record.date, 'weekly');
+        periodsMap.set(key, formatPeriodLabel(key, 'weekly'));
+      } else if (periodType === 'monthly') {
+        const key = getPeriodKey(record.date, 'monthly');
+        periodsMap.set(key, formatPeriodLabel(key, 'monthly'));
+      } else { // annual
+        const key = getPeriodKey(record.date, 'annual');
+        periodsMap.set(key, formatPeriodLabel(key, 'annual'));
+      }
+    });
+
+    return Array.from(periodsMap.entries())
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => new Date(a.key.replace('W', '')).getTime() - new Date(b.key.replace('W', '')).getTime());
+  }, [records, periodType, formatPeriodLabel, getPeriodKey]);
+
+  // Efeito para definir o selectedPeriodKey padrão (o mais recente)
+  useEffect(() => {
+    if (availablePeriods.length > 0) {
+      setSelectedPeriodKey(availablePeriods[availablePeriods.length - 1].key);
+    } else {
+      setSelectedPeriodKey(null);
+    }
+  }, [periodType, availablePeriods]); // Depende de periodType e availablePeriods
+
   // Função genérica para obter dados detalhados por dia ou mês dentro de um período selecionado
   const getDetailedPeriodData = useCallback((
     records: RunRecord[],
@@ -164,13 +197,13 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       }
     } else if (aggregationUnit === 'week') {
       let currentWeekStart = getStartOfWeek(subPeriodStartDate);
-      while (currentWeekStart <= subPeriodEndDate) {
+      while (currentWeekStart.getTime() <= subPeriodEndDate.getTime()) {
         const weekKey = getWeekKey(currentWeekStart);
         aggregatedData.set(weekKey, { sum: 0, count: 0 });
         currentWeekStart.setDate(currentWeekStart.getDate() + 7);
       }
     } else { // aggregationUnit === 'month'
-      for (let m = new Date(subPeriodStartDate); m <= subPeriodEndDate; m.setMonth(m.getMonth() + 1)) {
+      for (let m = new Date(subPeriodStartDate.getFullYear(), 0); m.getFullYear() === subPeriodStartDate.getFullYear(); m.setMonth(m.getMonth() + 1)) {
         const monthKey = m.toISOString().slice(0, 7);
         aggregatedData.set(monthKey, { sum: 0, count: 0 });
       }
@@ -217,7 +250,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       }
     });
 
-    const sortedKeys = Array.from(aggregatedData.keys()).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    const sortedKeys = Array.from(aggregatedData.keys()).sort((a, b) => new Date(a.replace('W', '')).getTime() - new Date(b.replace('W', '')).getTime());
 
     let cumulativeTracker = 0;
     return sortedKeys.map(key => {
@@ -237,10 +270,9 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       if (aggregationUnit === 'day') {
         nameLabel = new Date(key).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
       } else if (aggregationUnit === 'week') {
-        const weekStartDate = new Date(key.substring(1));
-        nameLabel = `Semana ${weekStartDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`;
+        nameLabel = formatPeriodLabel(key, 'weekly');
       } else { // aggregationUnit === 'month'
-        nameLabel = new Date(key + '-01').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+        nameLabel = formatPeriodLabel(key, 'monthly');
       }
 
       return {
@@ -248,7 +280,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
         value: parseFloat(displayValue.toFixed(2)),
       };
     });
-  }, [records, settings, periodType, getPeriodKey]);
+  }, [records, settings, periodType, getPeriodKey, formatPeriodLabel]);
 
   const periodicData = useMemo(() => {
     const sortedRecords = [...records].sort((a: RunRecord, b: RunRecord) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -291,14 +323,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
 
     return result;
   }, [records, settings, periodType, formatPeriodLabel, getPeriodKey]);
-
-  useEffect(() => {
-    if (periodicData.length > 0 && !selectedPeriodKey) {
-      setSelectedPeriodKey(periodicData[periodicData.length - 1].key);
-    } else if (periodicData.length === 0) {
-      setSelectedPeriodKey(null);
-    }
-  }, [periodType, periodicData, selectedPeriodKey]);
 
   // Dados para Evolução do Lucro Líquido (AreaChart - cumulativo)
   const detailedLucroLiquidoData = useMemo(() => {
@@ -740,14 +764,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
   );
 
   const renderPeriodicTool = () => {
-    const totals = periodicData.reduce((acc: { ganhos: number; custos: number; lucroLiquido: number; kmRodados: number; totalHoursWorked: number; ganhosPorHora: number; lucroLiquidoPorHora: number }, item: any) => {
-        acc.ganhos += item.ganhos;
-        acc.custos += item.custos;
-        acc.lucroLiquido += item.lucroLiquido;
-        acc.kmRodados += item.kmRodados;
-        acc.totalHoursWorked += item.totalHoursWorked;
-        return acc;
-    }, { ganhos: 0, custos: 0, lucroLiquido: 0, kmRodados: 0, totalHoursWorked: 0, ganhosPorHora: 0, lucroLiquidoPorHora: 0 });
+    const totals = periodicData.find(p => p.key === selectedPeriodKey) || { ganhos: 0, custos: 0, lucroLiquido: 0, kmRodados: 0, totalHoursWorked: 0, ganhosPorHora: 0, lucroLiquidoPorHora: 0 };
 
     const tooltipContentStyle = { backgroundColor: '#1f2937', border: '1px solid #4a5568', color: '#f9fafb' };
     const tooltipLabelStyle = { color: '#10b981' };
@@ -756,7 +773,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
         <div className="animate-fade-in-up">
             {renderHeader('Análise Periódica', <CalendarDays/>)}
             <div className="bg-gray-800 p-4 rounded-lg shadow-xl mb-4">
-                <div className="flex justify-center bg-gray-700/50 rounded-lg p-1">
+                <div className="flex justify-center bg-gray-700/50 rounded-lg p-1 mb-4">
                     {(['Semanal', 'Mensal', 'Anual'] as const).map(p => {
                         const periodMap: Record<'Semanal' | 'Mensal' | 'Anual', PeriodType> = { Semanal: 'weekly', Mensal: 'monthly', Anual: 'annual' };
                         const value = periodMap[p];
@@ -767,13 +784,31 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                         )
                     })}
                 </div>
+
+                {availablePeriods.length > 0 && (
+                    <div className="mb-4">
+                        <label htmlFor="period-select" className="sr-only">Selecionar Período</label>
+                        <select
+                            id="period-select"
+                            value={selectedPeriodKey || ''}
+                            onChange={(e) => setSelectedPeriodKey(e.target.value)}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none"
+                        >
+                            {availablePeriods.map(p => (
+                                <option key={p.key} value={p.key}>
+                                    {p.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
             </div>
 
-            {periodicData.length === 0 ? (
+            {periodicData.length === 0 || !selectedPeriodKey ? (
                  <div className="text-center text-gray-400 mt-10 bg-gray-800 p-6 rounded-lg">
                     <BarChart2 size={48} className="mx-auto mb-4" />
                     <h2 className="text-xl font-semibold">Dados Insuficientes</h2>
-                    <p className="mt-2">Não há registros suficientes para gerar uma análise {periodType}.</p>
+                    <p className="mt-2">Não há registros suficientes para gerar uma análise {periodType} ou o período selecionado.</p>
                 </div>
             ) : (
                 <>
@@ -783,8 +818,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-green-400">Lucro</p><p className="font-bold text-sm text-green-400">{totals.lucroLiquido.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</p></div>
                     <div className="bg-gray-800 p-2 rounded-lg"><p className="text-xs text-purple-400">Horas</p><p className="font-bold text-sm text-purple-400">{totals.totalHoursWorked.toFixed(1)} h</p></div>
                 </div>
-
-                {/* REMOVIDO: Seção de Comparação de Períodos */}
 
                 <div className="space-y-6">
                     {/* Graph 1: Ganhos Brutos vs. Custos Totais (BarChart - Total do Período) */}
@@ -821,23 +854,6 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
                      {/* Graph 2: Evolução do Lucro Líquido (AreaChart) */}
                     <div className="bg-gray-800 p-4 rounded-lg shadow-xl">
                         <h3 className="font-semibold text-base mb-4 text-brand-primary text-center">Evolução do Lucro Líquido</h3>
-                        {detailedLucroLiquidoData.length > 0 && (
-                          <div className="mb-4">
-                            <label htmlFor="period-select" className="sr-only">Selecionar Período</label>
-                            <select
-                              id="period-select"
-                              value={selectedPeriodKey || ''}
-                              onChange={(e) => setSelectedPeriodKey(e.target.value)}
-                              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-brand-primary focus:outline-none"
-                            >
-                              {periodicData.map(p => (
-                                <option key={p.key} value={p.key}>
-                                  {p.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
                         <div className="w-full h-60">
                             <ResponsiveContainer>
                                 <AreaChart data={detailedLucroLiquidoData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
