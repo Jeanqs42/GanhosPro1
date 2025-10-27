@@ -17,6 +17,22 @@ interface PremiumProps {
 type ActiveTool = 'menu' | 'insights' | 'reports' | 'periodic';
 type PeriodType = 'weekly' | 'monthly' | 'annual';
 
+// Helper to get the start of the week (Sunday) for a given date
+const getStartOfWeek = (date: Date): Date => {
+  const d = new Date(date);
+  d.setUTCHours(0, 0, 0, 0);
+  const day = d.getUTCDay(); // 0 for Sunday, 1 for Monday, etc.
+  const diff = d.getUTCDate() - day;
+  d.setUTCDate(diff);
+  return d;
+};
+
+// Helper to get a consistent week key (e.g., 'WYYYY-MM-DD' for Sunday)
+const getWeekKey = (date: Date): string => {
+  const startOfWeek = getStartOfWeek(date);
+  return `W${startOfWeek.toISOString().slice(0, 10)}`;
+};
+
 const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPremium }) => {
   const navigate = useNavigate();
   const [activeTool, setActiveTool] = useState<ActiveTool>('menu');
@@ -81,7 +97,7 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
     const date = new Date(dateStr);
     date.setUTCHours(12);
     if (period === 'weekly') {
-      const firstDay = new Date(date.setDate(date.getDate() - date.getUTCDay()));
+      const firstDay = getStartOfWeek(date);
       return `W${firstDay.toISOString().slice(0, 10)}`;
     }
     if (period === 'monthly') {
@@ -118,35 +134,43 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
 
     const aggregatedData = new Map<string, { sum: number; count: number; }>();
 
-    const startDate = new Date(selectedPeriodKey.includes('W') ? selectedPeriodKey.substring(1) : selectedPeriodKey);
-    let endDate = new Date(startDate);
+    let aggregationUnit: 'day' | 'week' | 'month';
+    let subPeriodStartDate: Date;
+    let subPeriodEndDate: Date;
 
-    let aggregationUnit: 'day' | 'month';
-
-    if (periodType === 'weekly' || periodType === 'monthly') {
-      // Para semanal, endDate é 6 dias após startDate. Para mensal, é o último dia do mês.
-      if (periodType === 'weekly') {
-        endDate.setDate(startDate.getDate() + 6);
-      } else { // monthly
-        endDate.setMonth(startDate.getMonth() + 1);
-        endDate.setDate(0); // Last day of the month
-      }
+    // Determine aggregation unit and date range for initialization
+    if (periodType === 'weekly') {
       aggregationUnit = 'day';
+      subPeriodStartDate = new Date(selectedPeriodKey.substring(1)); // e.g., '2024-07-01' from 'W2024-07-01'
+      subPeriodEndDate = new Date(subPeriodStartDate);
+      subPeriodEndDate.setDate(subPeriodStartDate.getDate() + 6);
+    } else if (periodType === 'monthly') {
+      aggregationUnit = 'week';
+      const [year, month] = selectedPeriodKey.split('-').map(Number);
+      subPeriodStartDate = new Date(year, month - 1, 1); // First day of the month
+      subPeriodEndDate = new Date(year, month, 0); // Last day of the month
     } else { // annual
-      endDate.setFullYear(startDate.getFullYear() + 1);
-      endDate.setDate(0); // Last day of previous month
-      endDate.setMonth(11); // December
       aggregationUnit = 'month';
+      const year = Number(selectedPeriodKey);
+      subPeriodStartDate = new Date(year, 0, 1); // First day of the year
+      subPeriodEndDate = new Date(year, 11, 31); // Last day of the year
     }
 
-    // Initialize map with all periods (days or months)
+    // Initialize map with all sub-periods
     if (aggregationUnit === 'day') {
-      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      for (let d = new Date(subPeriodStartDate); d <= subPeriodEndDate; d.setDate(d.getDate() + 1)) {
         const dateKey = d.toISOString().split('T')[0];
         aggregatedData.set(dateKey, { sum: 0, count: 0 });
       }
+    } else if (aggregationUnit === 'week') {
+      let currentWeekStart = getStartOfWeek(subPeriodStartDate);
+      while (currentWeekStart <= subPeriodEndDate) {
+        const weekKey = getWeekKey(currentWeekStart);
+        aggregatedData.set(weekKey, { sum: 0, count: 0 });
+        currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+      }
     } else { // aggregationUnit === 'month'
-      for (let m = new Date(startDate.getFullYear(), 0); m.getFullYear() === startDate.getFullYear(); m.setMonth(m.getMonth() + 1)) {
+      for (let m = new Date(subPeriodStartDate); m <= subPeriodEndDate; m.setMonth(m.getMonth() + 1)) {
         const monthKey = m.toISOString().slice(0, 7);
         aggregatedData.set(monthKey, { sum: 0, count: 0 });
       }
@@ -159,10 +183,13 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       const netProfit = record.totalEarnings - totalCosts;
 
       let key: string;
+      const recordDate = new Date(record.date);
       if (aggregationUnit === 'day') {
-        key = new Date(record.date).toISOString().split('T')[0];
+        key = recordDate.toISOString().split('T')[0];
+      } else if (aggregationUnit === 'week') {
+        key = getWeekKey(recordDate);
       } else { // aggregationUnit === 'month'
-        key = new Date(record.date).toISOString().slice(0, 7);
+        key = recordDate.toISOString().slice(0, 7);
       }
 
       let valueToAdd = 0;
@@ -209,6 +236,9 @@ const Premium: React.FC<PremiumProps> = ({ records, settings, isPremium, setIsPr
       let nameLabel: string;
       if (aggregationUnit === 'day') {
         nameLabel = new Date(key).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      } else if (aggregationUnit === 'week') {
+        const weekStartDate = new Date(key.substring(1));
+        nameLabel = `Semana ${weekStartDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`;
       } else { // aggregationUnit === 'month'
         nameLabel = new Date(key + '-01').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
       }
